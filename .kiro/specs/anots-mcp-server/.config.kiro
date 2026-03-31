@@ -1,0 +1,8 @@
+{
+  "name": "ANOTS as MCP Server",
+  "version": "1.0.0",
+  "status": "draft",
+  "description": "Transform ANOTS into an MCP server that exposes memory, routing, and chronicle capabilities to external agent systems",
+  "created": "2026-04-01",
+  "updated": "2026-04-01"
+}
