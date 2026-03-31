@@ -21,13 +21,13 @@ This document breaks down the implementation of ANOTS Unified Platform into conc
 - `src/core/config.ts` (new)
 
 **Acceptance Criteria:**
-- [ ] TypeScript configured with strict mode
-- [ ] ESLint and Prettier configured
-- [ ] Jest configured with ts-jest
-- [ ] fast-check installed for property-based testing
-- [ ] Environment variable loading with dotenv
-- [ ] Core types defined (DeploymentMode, SearchResult, ChronicleEntry, AgentDefinition)
-- [ ] Config loader reads from environment variables with defaults
+- [x] TypeScript configured with strict mode
+- [x] ESLint and Prettier configured
+- [x] Jest configured with ts-jest
+- [x] fast-check installed for property-based testing
+- [x] Environment variable loading with dotenv
+- [x] Core types defined (DeploymentMode, SearchResult, ChronicleEntry, AgentDefinition)
+- [x] Config loader reads from environment variables with defaults
 
 **Estimated Effort:** 2 hours
 
@@ -46,14 +46,14 @@ This document breaks down the implementation of ANOTS Unified Platform into conc
 - `tests/core/DeploymentManager.test.ts` (new)
 
 **Acceptance Criteria:**
-- [ ] DeploymentManager class with initialize() method
-- [ ] Mode validation (cli, mcp-server, standalone)
-- [ ] Service registry (Map<string, Service>)
-- [ ] Mode-specific initialization methods
-- [ ] Graceful error handling for invalid modes
-- [ ] Unit tests for all three modes
-- [ ] Property test for Property 1 (Mode Validation)
-- [ ] Property test for Property 2 (Mode Determinism)
+- [x] DeploymentManager class with initialize() method
+- [x] Mode validation (cli, mcp-server, standalone)
+- [x] Service registry (Map<string, Service>)
+- [x] Mode-specific initialization methods
+- [x] Graceful error handling for invalid modes
+- [x] Unit tests for all three modes
+- [x] Property test for Property 1 (Mode Validation)
+- [x] Property test for Property 2 (Mode Determinism)
 
 **Estimated Effort:** 4 hours
 
