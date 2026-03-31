@@ -77,14 +77,14 @@ This document breaks down the implementation of ANOTS Unified Platform into conc
 - `tests/memory/ChronicleService.test.ts` (new)
 
 **Acceptance Criteria:**
-- [ ] ChronicleService class with write(), read(), list(), search() methods
-- [ ] Append-only file writes (no overwrites)
-- [ ] YAML frontmatter parsing
-- [ ] Git auto-commit on write
-- [ ] Directory structure: data/chronicle/{participant}/{type}/
-- [ ] Unit tests for all methods
-- [ ] Property test for Property 5 (Chronicle Immutability)
-- [ ] Property test for Property 6 (Chronicle Write-Read Round-Trip)
+- [x] ChronicleService class with write(), read(), list(), search() methods
+- [x] Append-only file writes (no overwrites)
+- [x] YAML frontmatter parsing
+- [x] Git auto-commit on write
+- [x] Directory structure: data/chronicle/{participant}/{type}/
+- [x] Unit tests for all methods
+- [x] Property test for Property 5 (Chronicle Immutability)
+- [x] Property test for Property 6 (Chronicle Write-Read Round-Trip)
 
 **Estimated Effort:** 6 hours
 
