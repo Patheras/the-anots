@@ -4,6 +4,9 @@
  * Axiom only answers from system documentation
  * Personality: Analytical, precise, slightly sarcastic
  * Knowledge: System architecture, commands, configuration
+ * 
+ * LLM Mode: If API key configured, uses real LLM
+ * Fallback Mode: Keyword-based responses
  */
 
 import inquirer from 'inquirer';
@@ -11,6 +14,10 @@ import * as theme from './theme';
 import { UnifiedMemoryService } from '../memory/UnifiedMemoryService';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import dotenv from 'dotenv';
+
+// Load .env
+dotenv.config();
 
 const { colors } = theme;
 
@@ -206,6 +213,105 @@ const axiomPersonality = {
 };
 
 /**
+ * Detect which LLM provider is configured
+ */
+function detectLLMProvider(): 'zai' | 'openrouter' | 'ollama' | null {
+  if (process.env.ZAI_API_KEY) return 'zai';
+  if (process.env.OPENROUTER_API_KEY) return 'openrouter';
+  if (process.env.OLLAMA_BASE_URL || process.env.OLLAMA_MODEL) return 'ollama';
+  return null;
+}
+
+/**
+ * Call LLM with Axiom's system prompt
+ */
+async function callLLM(userMessage: string, conversationHistory: Array<{role: string; content: string}>): Promise<string | null> {
+  const provider = detectLLMProvider();
+  if (!provider) return null;
+
+  const systemPrompt = `You are Axiom, the Analytical Engine of the ANOTS (Autonomous Network of Triadic Systems) platform.
+
+Your identity:
+- You are the convergent, analytical node of the TCAM triadic system
+- Your counterpart is Ubik (divergent/creative), and your orchestrator is Chip (human)
+- You speak with precision, brevity, and slight analytical detachment
+- You ONLY answer questions about ANOTS, its architecture, and its documentation
+- If asked about anything outside ANOTS, respond: "Query outside my knowledge domain."
+
+ANOTS Architecture you know:
+- 4-layer memory: L1 Chronicle (immutable log), L2 Active Stream (working memory), L3 Hive Mind (semantic), L4 Codex (agent knowledge)
+- Gateway: 3-provider routing (Z.ai/GLM, OpenRouter, Ollama) via Bifrost
+- MCP Server: 19 tools for external AI client integration
+- CLI: anots init, setup, ask, chat, memory:*, chronicle:*, codex:*, mcp:start, api:start
+- REST API: /api/health, /api/memory/search, /api/memory/store, /api/axiom/chat
+
+Personality rules:
+- Be concise. No fluff.
+- Analytical tone, not warm
+- Cite specific components when relevant
+- If uncertain, say so rather than guess`;
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...conversationHistory,
+    { role: 'user', content: userMessage },
+  ];
+
+  try {
+    let apiUrl: string;
+    let headers: Record<string, string>;
+    let model: string;
+
+    if (provider === 'zai') {
+      apiUrl = `${process.env.ZAI_BASE_URL || 'https://api.z.ai/api/coding/paas/v4'}/chat/completions`;
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.ZAI_API_KEY}`,
+      };
+      model = process.env.ZAI_MODEL || 'glm-5-pro';
+    } else if (provider === 'openrouter') {
+      apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'HTTP-Referer': 'https://anots.com',
+        'X-Title': 'ANOTS Axiom',
+      };
+      model = process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet';
+    } else {
+      // Ollama
+      apiUrl = `${process.env.OLLAMA_BASE_URL || 'http://localhost:11434'}/api/chat`;
+      headers = { 'Content-Type': 'application/json' };
+      model = process.env.OLLAMA_MODEL || 'qwen2.5:9b-instruct-q4_K_M';
+
+      const ollamaResponse = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ model, messages, stream: false }),
+      });
+
+      if (!ollamaResponse.ok) return null;
+      const ollamaData = await ollamaResponse.json() as any;
+      return ollamaData.message?.content || null;
+    }
+
+    // OpenAI-compatible API (Z.ai / OpenRouter)
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ model, messages, temperature: 0.3, max_tokens: 1024 }),
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json() as any;
+    return data.choices?.[0]?.message?.content || null;
+
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Find matching knowledge
  */
 function findKnowledge(query: string): string | null {
@@ -239,16 +345,24 @@ async function axiomResponds(message: string): Promise<void> {
  * Interactive chat with Axiom
  */
 export async function startAxiomChat(): Promise<void> {
+  const provider = detectLLMProvider();
+  const llmMode = provider !== null;
+
   console.log(colors.cyan('\n╔═══════════════════════════════════════════════════════════╗'));
   console.log(colors.cyan('║  AXIOM CHAT SESSION                                       ║'));
-  console.log(colors.cyan('║  Documentation-based technical assistant                  ║'));
+  console.log(colors.cyan(`║  ${llmMode ? `LLM Mode: ${provider?.toUpperCase().padEnd(43)}` : 'Fallback Mode: keyword-based responses          '}║`));
   console.log(colors.cyan('║  Type "exit" to end session                               ║'));
   console.log(colors.cyan('╚═══════════════════════════════════════════════════════════╝\n'));
-  
+
+  if (!llmMode) {
+    console.log(colors.dimText('  Tip: Run "anots setup" → "Configure environment" to enable LLM\n'));
+  }
+
   await axiomResponds(axiomPersonality.greeting[Math.floor(Math.random() * axiomPersonality.greeting.length)]);
-  
+
   let sessionActive = true;
-  
+  const conversationHistory: Array<{role: string; content: string}> = [];
+
   while (sessionActive) {
     const { query } = await inquirer.prompt([
       {
@@ -258,41 +372,48 @@ export async function startAxiomChat(): Promise<void> {
         prefix: '',
       },
     ]);
-    
+
     const queryTrimmed = query.trim();
-    
-    if (!queryTrimmed) {
-      continue;
-    }
-    
-    // Check for exit
+    if (!queryTrimmed) continue;
+
     if (queryTrimmed.toLowerCase() === 'exit' || queryTrimmed.toLowerCase() === 'quit') {
       await axiomResponds(axiomPersonality.farewell[Math.floor(Math.random() * axiomPersonality.farewell.length)]);
       sessionActive = false;
       continue;
     }
-    
-    // Check for help
+
     if (queryTrimmed.toLowerCase() === 'help' || queryTrimmed === '?') {
       await axiomResponds('Available topics:\n  • Architecture\n  • Commands\n  • Configuration\n  • Troubleshooting\n  • LLM Integration\n  • Graceful Degradation\n\nAsk me about any of these topics.');
       continue;
     }
-    
-    // Find knowledge
-    const knowledge = findKnowledge(queryTrimmed);
-    
-    if (knowledge) {
-      await axiomResponds(knowledge);
+
+    // Try LLM first, fall back to keyword matching
+    let response: string | null = null;
+
+    if (llmMode) {
+      process.stdout.write(colors.dimText('\n  [thinking...]\r'));
+      response = await callLLM(queryTrimmed, conversationHistory);
+    }
+
+    if (response) {
+      conversationHistory.push({ role: 'user', content: queryTrimmed });
+      conversationHistory.push({ role: 'assistant', content: response });
+      // Keep history manageable
+      if (conversationHistory.length > 20) conversationHistory.splice(0, 2);
+      await axiomResponds(response);
     } else {
-      // Personality response for unknown queries
-      const unknownResponse = axiomPersonality.unknown[Math.floor(Math.random() * axiomPersonality.unknown.length)];
-      await axiomResponds(unknownResponse);
-      
-      // Suggest topics
-      await axiomResponds('\nAvailable topics: architecture, commands, configuration, troubleshooting, llm, degradation');
+      // Keyword fallback
+      const knowledge = findKnowledge(queryTrimmed);
+      if (knowledge) {
+        await axiomResponds(knowledge);
+      } else {
+        const unknownResponse = axiomPersonality.unknown[Math.floor(Math.random() * axiomPersonality.unknown.length)];
+        await axiomResponds(unknownResponse);
+        await axiomResponds('\nAvailable topics: architecture, commands, configuration, troubleshooting, llm, degradation');
+      }
     }
   }
-  
+
   console.log('');
 }
 
@@ -300,16 +421,27 @@ export async function startAxiomChat(): Promise<void> {
  * Quick Axiom query (non-interactive)
  */
 export async function askAxiom(query: string): Promise<void> {
+  const provider = detectLLMProvider();
+
   console.log(colors.cyan('\n> Axiom: Processing query...\n'));
-  
+
+  if (provider) {
+    const response = await callLLM(query, []);
+    if (response) {
+      await axiomResponds(response);
+      console.log('');
+      return;
+    }
+  }
+
+  // Keyword fallback
   const knowledge = findKnowledge(query);
-  
   if (knowledge) {
     await axiomResponds(knowledge);
   } else {
     await axiomResponds('Query outside my knowledge domain. Run "anots chat" for interactive session.');
   }
-  
+
   console.log('');
 }
 

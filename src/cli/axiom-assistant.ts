@@ -325,19 +325,70 @@ async function configureEnvironment(): Promise<void> {
       message: 'Codex root directory:',
       default: 'codex',
     },
+    // --- LLM Configuration ---
     {
       type: 'confirm',
-      name: 'useOllama',
-      message: 'Enable Ollama integration?',
+      name: 'useLLM',
+      message: colors.cyan('Enable LLM for Axiom? (enables real AI responses)'),
       default: false,
     },
+    {
+      type: 'list',
+      name: 'llmProvider',
+      message: 'Select LLM provider:',
+      when: (a: any) => a.useLLM,
+      choices: [
+        { name: '☁️  Z.ai / GLM (cloud, recommended)', value: 'zai' },
+        { name: '🌐 OpenRouter (cloud, 300+ models)', value: 'openrouter' },
+        { name: '🖥️  Ollama (local, free)', value: 'ollama' },
+      ],
+    },
+    // Z.ai
+    {
+      type: 'password',
+      name: 'zaiApiKey',
+      message: 'Z.ai API Key:',
+      when: (a: any) => a.llmProvider === 'zai',
+      mask: '*',
+    },
+    {
+      type: 'input',
+      name: 'zaiModel',
+      message: 'Z.ai Model:',
+      default: 'glm-5-pro',
+      when: (a: any) => a.llmProvider === 'zai',
+    },
+    // OpenRouter
+    {
+      type: 'password',
+      name: 'openrouterApiKey',
+      message: 'OpenRouter API Key:',
+      when: (a: any) => a.llmProvider === 'openrouter',
+      mask: '*',
+    },
+    {
+      type: 'input',
+      name: 'openrouterModel',
+      message: 'OpenRouter Model:',
+      default: 'anthropic/claude-3.5-sonnet',
+      when: (a: any) => a.llmProvider === 'openrouter',
+    },
+    // Ollama
     {
       type: 'input',
       name: 'ollamaUrl',
       message: 'Ollama URL:',
       default: 'http://localhost:11434',
-      when: (answers: any) => answers.useOllama,
+      when: (a: any) => a.llmProvider === 'ollama',
     },
+    {
+      type: 'input',
+      name: 'ollamaModel',
+      message: 'Ollama Model:',
+      default: 'qwen2.5:9b-instruct-q4_K_M',
+      when: (a: any) => a.llmProvider === 'ollama',
+    },
+    // Redis / Qdrant
     {
       type: 'confirm',
       name: 'useRedis',
@@ -349,7 +400,7 @@ async function configureEnvironment(): Promise<void> {
       name: 'redisUrl',
       message: 'Redis URL:',
       default: 'redis://localhost:6379',
-      when: (answers: any) => answers.useRedis,
+      when: (a: any) => a.useRedis,
     },
   ]);
   
@@ -366,12 +417,28 @@ CODEX_ROOT=${answers.codexRoot}
 
 `;
   
-  if (answers.useOllama) {
-    envContent += `# Ollama Configuration
-OLLAMA_URL=${answers.ollamaUrl}
-EMBEDDING_MODEL=nomic-embed-text
+  if (answers.useLLM) {
+    if (answers.llmProvider === 'zai') {
+      envContent += `# Z.ai / GLM Configuration
+ZAI_API_KEY=${answers.zaiApiKey}
+ZAI_BASE_URL=https://api.z.ai/api/coding/paas/v4
+ZAI_MODEL=${answers.zaiModel}
 
 `;
+    } else if (answers.llmProvider === 'openrouter') {
+      envContent += `# OpenRouter Configuration
+OPENROUTER_API_KEY=${answers.openrouterApiKey}
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=${answers.openrouterModel}
+
+`;
+    } else if (answers.llmProvider === 'ollama') {
+      envContent += `# Ollama Configuration
+OLLAMA_BASE_URL=${answers.ollamaUrl}
+OLLAMA_MODEL=${answers.ollamaModel}
+
+`;
+    }
   }
   
   if (answers.useRedis) {
@@ -385,9 +452,73 @@ REDIS_URL=${answers.redisUrl}
   try {
     await fs.writeFile('.env', envContent);
     await axiomSays('Configuration file created: .env');
+    
+    // Test LLM connection if configured
+    if (answers.useLLM) {
+      await testLLMConnection(answers);
+    }
+    
     await axiomSays('Environment configured successfully.');
   } catch (error) {
     await axiomSays(`Error writing .env file: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Test LLM connection after configuration
+ */
+async function testLLMConnection(answers: any): Promise<void> {
+  const spinner = ora({
+    text: colors.cyan('Testing LLM connection...'),
+    spinner: { frames: theme.spinnerFrames.map(f => colors.cyan(f)) },
+  }).start();
+  
+  try {
+    let testPassed = false;
+    
+    if (answers.llmProvider === 'zai') {
+      const response = await fetch(`${answers.zaiBaseUrl || 'https://api.z.ai/api/coding/paas/v4'}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${answers.zaiApiKey}`,
+        },
+        body: JSON.stringify({
+          model: answers.zaiModel || 'glm-5-pro',
+          messages: [{ role: 'user', content: 'Hello' }],
+          max_tokens: 10,
+        }),
+      });
+      testPassed = response.ok;
+    } else if (answers.llmProvider === 'openrouter') {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${answers.openrouterApiKey}`,
+        },
+        body: JSON.stringify({
+          model: answers.openrouterModel || 'anthropic/claude-3.5-sonnet',
+          messages: [{ role: 'user', content: 'Hello' }],
+          max_tokens: 10,
+        }),
+      });
+      testPassed = response.ok;
+    } else if (answers.llmProvider === 'ollama') {
+      const response = await fetch(`${answers.ollamaUrl}/api/tags`);
+      testPassed = response.ok;
+    }
+    
+    if (testPassed) {
+      spinner.succeed(colors.success('LLM connection successful'));
+      await axiomSays('Neural link to LLM established. Axiom is now fully operational.');
+    } else {
+      spinner.warn(colors.warning('LLM connection failed - check your API key'));
+      await axiomSays('Warning: LLM connection failed. Axiom will use keyword fallback mode.');
+    }
+  } catch (error) {
+    spinner.warn(colors.warning('LLM connection test failed'));
+    await axiomSays('Warning: Could not reach LLM. Axiom will use keyword fallback mode.');
   }
 }
 
