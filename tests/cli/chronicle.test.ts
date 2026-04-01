@@ -42,8 +42,18 @@ describe('CLI Chronicle Commands', () => {
       const layers = memoryService.getLayers();
       
       // Write some test chapters
-      await layers.chronicle.write('Test chapter 1', 'general', ['user', 'axiom']);
-      await layers.chronicle.write('Test chapter 2', 'general', ['user', 'ubik']);
+      await layers.chronicle.write({
+        date: new Date().toISOString().split('T')[0],
+        participants: ['user', 'axiom'],
+        sessionType: 'general',
+        content: 'Test chapter 1',
+      });
+      await layers.chronicle.write({
+        date: new Date().toISOString().split('T')[0],
+        participants: ['user', 'ubik'],
+        sessionType: 'general',
+        content: 'Test chapter 2',
+      });
       
       // List chapters
       const chapters = await layers.chronicle.list('general');
@@ -59,14 +69,27 @@ describe('CLI Chronicle Commands', () => {
       const layers = memoryService.getLayers();
       
       // Write chapters of different types
-      await layers.chronicle.write('General chapter', 'general', ['user']);
-      await layers.chronicle.write('Ubik chapter', 'ubik', ['user', 'ubik']);
+      await layers.chronicle.write({
+        date: new Date().toISOString().split('T')[0],
+        participants: ['user'],
+        sessionType: 'general',
+        content: 'General chapter',
+      });
+      await layers.chronicle.write({
+        date: new Date().toISOString().split('T')[0],
+        participants: ['user', 'ubik'],
+        sessionType: 'ubik',
+        content: 'Ubik chapter',
+      });
       
       // List only ubik chapters
       const ubikChapters = await layers.chronicle.list('ubik');
       
       expect(ubikChapters.length).toBeGreaterThanOrEqual(1);
-      // All should be ubik type (check file path or metadata)
+      // All should be ubik type
+      ubikChapters.forEach(chapter => {
+        expect(chapter.sessionType).toBe('ubik');
+      });
     });
     
     it('should handle empty chronicle', async () => {
@@ -84,15 +107,16 @@ describe('CLI Chronicle Commands', () => {
       const layers = memoryService.getLayers();
       
       // Write a test chapter
-      const chapterId = await layers.chronicle.write(
-        'Test chapter content',
-        'general',
-        ['user', 'axiom']
-      );
+      await layers.chronicle.write({
+        date: new Date().toISOString().split('T')[0],
+        participants: ['user', 'axiom'],
+        sessionType: 'general',
+        content: 'Test chapter content',
+      });
       
       // Read it back
       const chapters = await layers.chronicle.list('general');
-      const chapter = chapters.find(c => c.chapterId === chapterId);
+      const chapter = chapters.find(c => c.content.includes('Test chapter content'));
       
       expect(chapter).toBeDefined();
       expect(chapter?.content).toContain('Test chapter content');
@@ -104,14 +128,15 @@ describe('CLI Chronicle Commands', () => {
       const layers = memoryService.getLayers();
       
       // Write searchable content
-      await layers.chronicle.write(
-        'This is a unique searchable phrase',
-        'general',
-        ['user']
-      );
+      await layers.chronicle.write({
+        date: new Date().toISOString().split('T')[0],
+        participants: ['user'],
+        sessionType: 'general',
+        content: 'This is a unique searchable phrase',
+      });
       
       // Search
-      const results = await layers.chronicle.search('unique searchable');
+      const results = await layers.chronicle.search({ content: 'unique searchable' });
       
       expect(results.length).toBeGreaterThan(0);
       expect(results[0].content).toContain('unique searchable');
@@ -120,7 +145,7 @@ describe('CLI Chronicle Commands', () => {
     it('should return empty results for non-matching query', async () => {
       const layers = memoryService.getLayers();
       
-      const results = await layers.chronicle.search('nonexistent_xyz_query');
+      const results = await layers.chronicle.search({ content: 'nonexistent_xyz_query' });
       
       expect(results).toEqual([]);
     });
@@ -137,11 +162,16 @@ describe('CLI Chronicle Commands', () => {
             const layers = memoryService.getLayers();
             
             // Write chapter
-            const chapterId = await layers.chronicle.write(content, type as any, participants);
+            await layers.chronicle.write({
+              date: new Date().toISOString().split('T')[0],
+              participants,
+              sessionType: type as any,
+              content,
+            });
             
             // Read it back
             const chapters = await layers.chronicle.list(type as any);
-            const chapter = chapters.find(c => c.chapterId === chapterId);
+            const chapter = chapters.find(c => c.content === content);
             
             // Content should match exactly
             expect(chapter?.content).toBe(content);
@@ -170,7 +200,12 @@ describe('CLI Chronicle Commands', () => {
       
       const layers = testService.getLayers();
       await expect(
-        layers.chronicle.write('test', 'general', ['user'])
+        layers.chronicle.write({
+          date: new Date().toISOString().split('T')[0],
+          participants: ['user'],
+          sessionType: 'general',
+          content: 'test',
+        })
       ).rejects.toThrow();
     });
   });

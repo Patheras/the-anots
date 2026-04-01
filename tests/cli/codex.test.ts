@@ -72,11 +72,11 @@ describe('CLI Codex Commands', () => {
       const ubikCodex = await memoryService.readCodex('ubik');
       const axiomCodex = await memoryService.readCodex('axiom');
       
-      // Ubik should mention cognitive spray, half-life
-      expect(ubikCodex.identity.toLowerCase()).toMatch(/ubik|cognitive|spray|half-life/);
+      // Ubik should mention creative, divergent, resonance
+      expect(ubikCodex.identity.toLowerCase()).toMatch(/ubik|creative|divergent|resonance/);
       
-      // Axiom should mention analytical, SACOP
-      expect(axiomCodex.identity.toLowerCase()).toMatch(/axiom|analytical|sacop/);
+      // Axiom should mention analytical, convergent, SACOP
+      expect(axiomCodex.identity.toLowerCase()).toMatch(/axiom|analytical|convergent|sacop/);
     });
   });
   
@@ -89,7 +89,7 @@ describe('CLI Codex Commands', () => {
       
       expect(files).toContain('README.md');
       expect(files).toContain('TASKS.md');
-      expect(files).toContain('MEMORY.md');
+      expect(files).toContain('NOTES.md');
       expect(files).toContain('TOOLS.md');
     });
     
@@ -100,7 +100,7 @@ describe('CLI Codex Commands', () => {
       
       expect(files).toContain('README.md');
       expect(files).toContain('TASKS.md');
-      expect(files).toContain('MEMORY.md');
+      expect(files).toContain('NOTES.md');
       expect(files).toContain('TOOLS.md');
     });
   });
@@ -123,25 +123,37 @@ describe('CLI Codex Commands', () => {
   });
   
   describe('Codex Updates', () => {
-    it('should update codex memory', async () => {
+    it('should update codex notes', async () => {
       const layers = memoryService.getLayers();
       
-      const newMemory = 'Test memory update for Ubik';
-      await layers.codex.write('ubik', 'MEMORY.md', newMemory);
+      const newNotes = 'Test notes update for Ubik';
+      await layers.codex.write({
+        node: 'ubik',
+        file: 'NOTES.md',
+        operation: 'replace',
+        content: newNotes,
+        summary: 'Test notes update',
+      });
       
       // Read back
-      const content = await layers.codex.read('ubik', 'MEMORY.md');
-      expect(content).toBe(newMemory);
+      const content = await layers.codex.readFile('ubik', 'NOTES.md');
+      expect(content).toBe(newNotes);
     });
     
     it('should update codex tasks', async () => {
       const layers = memoryService.getLayers();
       
       const newTasks = '- [ ] Test task 1\n- [ ] Test task 2';
-      await layers.codex.write('axiom', 'TASKS.md', newTasks);
+      await layers.codex.write({
+        node: 'axiom',
+        file: 'TASKS.md',
+        operation: 'replace',
+        content: newTasks,
+        summary: 'Test tasks update',
+      });
       
       // Read back
-      const content = await layers.codex.read('axiom', 'TASKS.md');
+      const content = await layers.codex.readFile('axiom', 'TASKS.md');
       expect(content).toBe(newTasks);
     });
   });
@@ -168,7 +180,13 @@ describe('CLI Codex Commands', () => {
       await testService.shutdown();
       
       await expect(
-        layers.codex.write('ubik', 'MEMORY.md', 'test')
+        layers.codex.write({
+          node: 'ubik',
+          file: 'NOTES.md',
+          operation: 'replace',
+          content: 'test',
+          summary: 'test',
+        })
       ).rejects.toThrow();
     });
   });

@@ -38,7 +38,7 @@ export interface SearchResult {
 }
 
 export interface ChronicleEntry {
-  chapterId: string;
+  chapterId?: string; // Optional - will be auto-generated if not provided
   date: string;
   participants: string[];
   sessionType: string;
