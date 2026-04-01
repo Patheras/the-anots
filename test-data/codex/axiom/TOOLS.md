@@ -11,3 +11,7 @@
 ## Test Section
 
 _2l!3$l980
+
+## Test Section
+
+isPrototypeOf
