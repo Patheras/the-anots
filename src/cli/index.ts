@@ -11,6 +11,7 @@ import chalk from 'chalk';
 import * as theme from './theme';
 const { colors } = theme;
 import { UnifiedMemoryService } from '../memory/UnifiedMemoryService';
+import { runAxiomSetup, quickHandshake } from './axiom-assistant';
 
 const program = new Command();
 
@@ -239,6 +240,36 @@ program
   });
 
 // System commands
+program
+  .command('init')
+  .description('Quick initialization with Axiom handshake')
+  .action(async () => {
+    await quickHandshake();
+    
+    try {
+      const memory = await initMemoryService();
+      const health = await memory.getLayerHealth();
+      
+      console.log(theme.header('System Initialized'));
+      console.log(theme.bullet(`L1:Chronicle     ${health.chronicle ? colors.success('✓') : colors.error('✗')}`));
+      console.log(theme.bullet(`L2:ActiveStream  ${health.activeStream ? colors.success('✓') : colors.error('✗')}`));
+      console.log(theme.bullet(`L3:HiveMind      ${health.hiveMind ? colors.success('✓') : colors.error('✗')}`));
+      console.log(theme.bullet(`L4:Codex         ${health.codex ? colors.success('✓') : colors.error('✗')}`));
+      console.log('');
+      console.log(colors.success('✓ System ready'));
+    } catch (error) {
+      console.error(colors.error(`Initialization failed: ${(error as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('setup')
+  .description('Interactive setup with Axiom assistant')
+  .action(async () => {
+    await runAxiomSetup();
+  });
+
 program
   .command('status')
   .description('Show system status')
