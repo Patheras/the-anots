@@ -103,14 +103,14 @@ This document breaks down the implementation of ANOTS Unified Platform into conc
 - `tests/memory/ActiveStreamService.test.ts` (new)
 
 **Acceptance Criteria:**
-- [ ] ActiveStreamService class with getContext(), updateContext(), clear() methods
-- [ ] Redis client integration (optional, graceful degradation)
-- [ ] File-based fallback when Redis unavailable
-- [ ] Context serialization/deserialization
-- [ ] Health check method
-- [ ] Unit tests with Redis mocked
-- [ ] Integration test with real Redis (optional)
-- [ ] Property test for Property 8 (Interactive Context Preservation)
+- [x] ActiveStreamService class with getContext(), updateContext(), clear() methods
+- [x] Redis client integration (optional, graceful degradation)
+- [x] File-based fallback when Redis unavailable
+- [x] Context serialization/deserialization
+- [x] Health check method
+- [x] Unit tests with Redis mocked
+- [x] Integration test with real Redis (optional)
+- [x] Property test for Property 8 (Interactive Context Preservation)
 
 **Estimated Effort:** 4 hours
 
