@@ -156,13 +156,13 @@ This document breaks down the implementation of ANOTS Unified Platform into conc
 - `tests/memory/CodexService.test.ts` (new)
 
 **Acceptance Criteria:**
-- [ ] CodexService class with read(), write(), list(), init() methods
-- [ ] Per-agent directory structure: data/codex/{agentId}/
-- [ ] Standard files: README.md, TASKS.md, MEMORY.md, TOOLS.md
-- [ ] Agent isolation (agents can only access their own codex)
-- [ ] Health check method
-- [ ] Unit tests for all methods
-- [ ] Property test for agent isolation
+- [x] CodexService class with read(), write(), list(), init() methods
+- [x] Per-agent directory structure: data/codex/{agentId}/
+- [x] Standard files: README.md, TASKS.md, MEMORY.md, TOOLS.md
+- [x] Agent isolation (agents can only access their own codex)
+- [x] Health check method
+- [x] Unit tests for all methods
+- [x] Property test for agent isolation
 
 **Estimated Effort:** 3 hours
 
