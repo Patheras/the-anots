@@ -11,3 +11,7 @@
 ## Test Section
 
 g&3.Qiqn?"7G
+
+## Test Section
+
+upSetter__toLocaleS
