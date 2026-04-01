@@ -35,6 +35,7 @@ export const colors = {
   text: chalk.white,
   dimText: chalk.gray,
   highlight: chalk.hex('#FF00FF'),
+  white: chalk.white,
 };
 
 // ASCII art banner

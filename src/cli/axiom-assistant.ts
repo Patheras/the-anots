@@ -10,7 +10,7 @@ import ora from 'ora';
 import * as theme from './theme';
 import { UnifiedMemoryService } from '../memory/UnifiedMemoryService';
 import * as fs from 'fs/promises';
-import * as path from 'path';
+import { awakeningSequence, synchronizationComplete, quickSync } from './awakening';
 
 const { colors } = theme;
 
@@ -49,6 +49,30 @@ const axiomDialogue = {
     'Cognitive augmentation matrix online.',
   ],
 };
+
+/**
+ * Check if this is first time setup
+ */
+async function checkFirstTime(): Promise<boolean> {
+  try {
+    // Check if .anots-initialized file exists
+    await fs.access('.anots-initialized');
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Mark as initialized
+ */
+async function markInitialized(): Promise<void> {
+  try {
+    await fs.writeFile('.anots-initialized', new Date().toISOString());
+  } catch (error) {
+    // Ignore errors
+  }
+}
 
 /**
  * Axiom speaks with typing effect
@@ -124,7 +148,7 @@ async function checkSystemRequirements(): Promise<{
   // Check Ollama
   try {
     const response = await fetch('http://localhost:11434/api/tags').catch(() => null);
-    checks.hasOllama = response?.ok || false;
+    checks.hasOllama = !!response?.ok;
   } catch {}
   
   // Check Redis
@@ -136,7 +160,7 @@ async function checkSystemRequirements(): Promise<{
   // Check Qdrant
   try {
     const response = await fetch('http://localhost:6333/collections').catch(() => null);
-    checks.hasQdrant = response?.ok || false;
+    checks.hasQdrant = !!response?.ok;
   } catch {}
   
   return checks;
@@ -146,12 +170,26 @@ async function checkSystemRequirements(): Promise<{
  * Interactive setup with Axiom
  */
 export async function runAxiomSetup(): Promise<void> {
-  showAxiomBanner();
-  console.log('');
+  // Check if this is first time
+  const isFirstTime = await checkFirstTime();
   
-  // Greeting
-  for (const line of axiomDialogue.greeting) {
-    await axiomSays(line, 20);
+  if (isFirstTime) {
+    // Awakening sequence for first-time users
+    await awakeningSequence();
+  } else {
+    // Quick sync for returning users
+    await quickSync();
+    showAxiomBanner();
+    console.log('');
+    await axiomSays('Welcome back. Ready to proceed.');
+    console.log('');
+  }
+  
+  // Continue with normal setup...
+  if (!isFirstTime) {
+    for (const line of axiomDialogue.greeting.slice(1)) {
+      await axiomSays(line, 20);
+    }
   }
   
   console.log('');
@@ -243,9 +281,11 @@ async function initializeMemorySystem(): Promise<void> {
     
     await memory.shutdown();
     
-    for (const line of axiomDialogue.ready) {
-      await axiomSays(line, 20);
-    }
+    // Mark as initialized
+    await markInitialized();
+    
+    // Synchronization complete
+    await synchronizationComplete();
     
     console.log('');
     console.log(theme.box(
