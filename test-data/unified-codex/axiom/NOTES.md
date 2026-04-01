@@ -7,3 +7,7 @@
 ---
 
 *Last Updated: 2026-04-01T23:38:00.385Z*
+
+## Axiom Note
+
+Axiom-specific note
