@@ -11,3 +11,5 @@
 ---
 
 *Last Updated: 2026-04-01T23:37:38.571Z*
+
+hasOwnProperty|,ble__defineGet
