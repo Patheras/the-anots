@@ -6,6 +6,7 @@
 
 import * as fc from 'fast-check';
 import { Router } from '../../src/gateway/Router';
+import { ModelSelector } from '../../src/gateway/ModelSelector';
 import {
   ClassificationResult,
   QuotaStatus,
@@ -16,7 +17,12 @@ import {
 
 fc.configureGlobal({ numRuns: 100 });
 
-const router = new Router('glm-5-pro', 'qwen3.5:latest');
+const modelSelector = new ModelSelector({
+  opus: 'glm-5.1',
+  sonnet: 'glm-4.7',
+  haiku: 'glm-4.5-air',
+});
+const router = new Router(modelSelector, 'qwen3.5:latest');
 
 // ─── Arbitraries ──────────────────────────────────────────────────────────────
 
@@ -114,7 +120,7 @@ describe('Property 5: High-Entropy Cloud Routing', () => {
           const highEntropy = { ...classification, entropy: 'high' as const };
           const result = router.decide(highEntropy, activeQuota(), healthyCloud(), healthyLocal());
           expect(result.selectedProvider).toBe('cloud');
-          expect(result.model).toBe('glm-5-pro');
+          expect(result.model).toBe('glm-5.1'); // Opus-tier for high-entropy
         }
       )
     );

@@ -16,13 +16,14 @@ import {
   RoutingDecision,
   ProviderId,
 } from './types';
+import { ModelSelector } from './ModelSelector';
 
 export class Router {
-  private readonly cloudModel: string;
+  private readonly modelSelector: ModelSelector;
   private readonly localModel: string;
 
-  constructor(cloudModel = 'glm-5-pro', localModel = 'qwen3.5:latest') {
-    this.cloudModel = cloudModel;
+  constructor(modelSelector?: ModelSelector, localModel = 'qwen3.5:latest') {
+    this.modelSelector = modelSelector ?? new ModelSelector();
     this.localModel = localModel;
   }
 
@@ -56,7 +57,8 @@ export class Router {
 
     if (preferCloud) {
       selectedProvider = 'cloud';
-      model = this.cloudModel;
+      // Use ModelSelector to choose appropriate cloud model based on task
+      model = this.modelSelector.selectModel(classification.taskType, classification.entropy);
       fallbackChain = localAvailable ? ['local'] : [];
     } else {
       // Low entropy, quota exhausted, or cloud unavailable
@@ -68,7 +70,8 @@ export class Router {
       } else if (cloudAvailable && !quotaStatus.exhausted) {
         // Local down, fall back to cloud even for low-entropy
         selectedProvider = 'cloud';
-        model = this.cloudModel;
+        // Use appropriate model tier for the task
+        model = this.modelSelector.selectModel(classification.taskType, classification.entropy);
         fallbackChain = [];
       } else {
         // Both unavailable - no live provider, cache only

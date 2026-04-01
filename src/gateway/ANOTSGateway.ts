@@ -29,6 +29,7 @@ import { BifrostProcessManager } from './BifrostProcessManager';
 import { ResponseCache } from './ResponseCache';
 import { GatewayMetrics } from './GatewayMetrics';
 import { GatewayAuditLog } from './GatewayAuditLog';
+import { ModelSelector } from './ModelSelector';
 
 /** Structured error response when all providers fail */
 const makeErrorResponse = (requestId: string, details: string[]): ChatCompletion => ({
@@ -65,7 +66,12 @@ export class ANOTSGateway {
     }
 
     this.classifier = new TaskClassifier();
-    this.router = new Router(this.config.zaiModel, this.config.ollamaModel);
+    const modelSelector = new ModelSelector({
+      opus: this.config.zaiModel,
+      sonnet: 'glm-4.7',
+      haiku: 'glm-4.5-air',
+    });
+    this.router = new Router(modelSelector, this.config.ollamaModel);
     this.quota = new QuotaManager(this.config.quotaLimit, this.config.quotaResetIntervalHours);
     this.health = new GatewayHealthMonitor();
     this.bifrost = new BifrostClient(this.config.bifrostPort);
