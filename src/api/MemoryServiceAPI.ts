@@ -1,7 +1,7 @@
 /**
  * Memory Service REST API
  * 
- * Provides HTTP endpoints for memory operations.
+ * Provides HTTP endpoints for memory operations and Axiom chat.
  * Non-blocking communication with main dialogue.
  * 
  * Requirements: 2.3
@@ -10,7 +10,8 @@
 
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import { MemoryService } from '../memory/MemoryService';
+import { UnifiedMemoryService } from '../memory/UnifiedMemoryService';
+import { ANOTSGateway } from '../gateway/ANOTSGateway';
 import { z } from 'zod';
 
 /**
@@ -20,65 +21,62 @@ export interface MemoryServiceAPIConfig {
   port: number;
   host: string;
   corsOrigins?: string[];
+  enableAxiom?: boolean; // Enable Axiom chat endpoint
 }
 
 /**
  * Request validation schemas
  */
-const ExtractTruthsSchema = z.object({
-  dialogue: z.string().min(1, 'Dialogue cannot be empty'),
-  sessionId: z.string().optional(),
-  userId: z.string().optional(),
-});
-
-const InscribeChronicleSchema = z.object({
-  session: z.object({
-    date: z.string(),
-    chapterId: z.string(),
-    participants: z.array(z.string()),
-    sessionType: z.string(),
-    dialogue: z.array(z.object({
-      role: z.string(),
-      content: z.string(),
-      timestamp: z.string(),
-    })),
-    summary: z.string().optional(),
-    truths: z.array(z.any()).optional(),
-    insights: z.array(z.string()).optional(),
-  }),
-});
-
-const SearchMemoriesSchema = z.object({
+const SearchSchema = z.object({
   query: z.string().min(1, 'Query cannot be empty'),
   limit: z.number().int().positive().optional(),
-  userId: z.string().optional(),
 });
 
-const SleepSchema = z.object({
-  force: z.boolean().optional(),
+const StoreSchema = z.object({
+  content: z.string().min(1, 'Content cannot be empty'),
+  metadata: z.record(z.any()).optional(),
+});
+
+const ChronicleWriteSchema = z.object({
+  content: z.string().min(1, 'Content cannot be empty'),
+  participants: z.array(z.string()),
+  sessionType: z.string(),
+  metadata: z.record(z.any()).optional(),
+});
+
+const AxiomChatSchema = z.object({
+  message: z.string().min(1, 'Message cannot be empty'),
+  sessionId: z.string().optional(),
 });
 
 /**
  * Memory Service REST API Server
  * 
  * Endpoints:
- * - POST /api/memory/extract-truths - Extract truths from dialogue
- * - POST /api/memory/inscribe-chronicle - Inscribe Chronicle chapter
+ * - GET /api/health - Health check
  * - POST /api/memory/search - Search memories
- * - GET /api/memory/health - Health check
- * - POST /api/memory/sleep - Trigger sleeping cycle
+ * - POST /api/memory/store - Store content
+ * - POST /api/memory/stats - Get statistics
+ * - POST /api/chronicle/write - Write chronicle entry
+ * - POST /api/axiom/chat - Chat with Axiom (optional)
  * 
  * Requirements: 2.3
  */
 export class MemoryServiceAPI {
   private app: express.Application;
   private config: MemoryServiceAPIConfig;
-  private memoryService: MemoryService;
+  private memoryService: UnifiedMemoryService;
+  private gateway?: ANOTSGateway;
   private server?: any;
 
-  constructor(memoryService: MemoryService, config: MemoryServiceAPIConfig) {
+  constructor(
+    memoryService: UnifiedMemoryService,
+    config: MemoryServiceAPIConfig,
+    gateway?: ANOTSGateway
+  ) {
     this.memoryService = memoryService;
     this.config = config;
+    this.gateway = gateway;
     this.app = express();
     
     this.setupMiddleware();
@@ -112,33 +110,41 @@ export class MemoryServiceAPI {
    */
   private setupRoutes(): void {
     // Health check endpoint
-    this.app.get('/api/memory/health', this.handleHealthCheck.bind(this));
+    this.app.get('/api/health', this.handleHealthCheck.bind(this));
 
-    // Extract truths endpoint
-    this.app.post('/api/memory/extract-truths', this.handleExtractTruths.bind(this));
+    // Memory endpoints
+    this.app.post('/api/memory/search', this.handleSearch.bind(this));
+    this.app.post('/api/memory/store', this.handleStore.bind(this));
+    this.app.get('/api/memory/stats', this.handleStats.bind(this));
 
-    // Inscribe Chronicle endpoint
-    this.app.post('/api/memory/inscribe-chronicle', this.handleInscribeChronicle.bind(this));
+    // Chronicle endpoints
+    this.app.post('/api/chronicle/write', this.handleChronicleWrite.bind(this));
 
-    // Search memories endpoint
-    this.app.post('/api/memory/search', this.handleSearchMemories.bind(this));
-
-    // Sleep endpoint
-    this.app.post('/api/memory/sleep', this.handleSleep.bind(this));
+    // Axiom chat endpoint (optional)
+    if (this.config.enableAxiom && this.gateway) {
+      this.app.post('/api/axiom/chat', this.handleAxiomChat.bind(this));
+    }
 
     // Root endpoint
     this.app.get('/', (req, res) => {
+      const endpoints = [
+        'GET /api/health',
+        'POST /api/memory/search',
+        'POST /api/memory/store',
+        'GET /api/memory/stats',
+        'POST /api/chronicle/write',
+      ];
+
+      if (this.config.enableAxiom && this.gateway) {
+        endpoints.push('POST /api/axiom/chat');
+      }
+
       res.json({
-        service: 'TCAM Memory Service',
+        service: 'ANOTS Unified Memory Service',
         version: '1.0.0',
         status: 'running',
-        endpoints: [
-          'GET /api/memory/health',
-          'POST /api/memory/extract-truths',
-          'POST /api/memory/inscribe-chronicle',
-          'POST /api/memory/search',
-          'POST /api/memory/sleep',
-        ],
+        axiomEnabled: this.config.enableAxiom && !!this.gateway,
+        endpoints,
       });
     });
   }
@@ -167,22 +173,23 @@ export class MemoryServiceAPI {
   }
 
   /**
-   * GET /api/memory/health
+   * GET /api/health
    * 
    * Returns health status of Memory Service
-   * 
-   * Requirements: 13.1, 13.2, 13.6
    */
   private async handleHealthCheck(req: Request, res: Response): Promise<void> {
     try {
-      const health = this.memoryService.getHealth();
+      const health = await this.memoryService.getLayerHealth();
+      const isHealthy = await this.memoryService.isHealthy();
       
-      const statusCode = health.status === 'healthy' ? 200 : 
-                        health.status === 'degraded' ? 503 : 503;
+      const statusCode = isHealthy ? 200 : 503;
       
       res.status(statusCode).json({
         success: true,
-        data: health,
+        data: {
+          overall: isHealthy ? 'healthy' : 'degraded',
+          layers: health,
+        },
       });
     } catch (error) {
       res.status(500).json({
@@ -194,100 +201,17 @@ export class MemoryServiceAPI {
   }
 
   /**
-   * POST /api/memory/extract-truths
-   * 
-   * Extract truths from dialogue text
-   * 
-   * Body: { dialogue: string, sessionId?: string, userId?: string }
-   * 
-   * Requirements: 8.1, 8.2
-   */
-  private async handleExtractTruths(req: Request, res: Response): Promise<void> {
-    try {
-      // Validate request
-      const body = ExtractTruthsSchema.parse(req.body);
-      
-      // Extract truths (async, non-blocking)
-      const truths = await this.memoryService.extractTruths(body.dialogue);
-      
-      res.json({
-        success: true,
-        data: {
-          truths,
-          count: truths.length,
-        },
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          success: false,
-          error: 'Validation Error',
-          details: error.errors,
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          error: 'Failed to extract truths',
-          message: (error as Error).message,
-        });
-      }
-    }
-  }
-
-  /**
-   * POST /api/memory/inscribe-chronicle
-   * 
-   * Inscribe a Chronicle chapter
-   * 
-   * Body: { session: ChronicleSession }
-   * 
-   * Requirements: 9.1, 9.2
-   */
-  private async handleInscribeChronicle(req: Request, res: Response): Promise<void> {
-    try {
-      // Validate request
-      const body = InscribeChronicleSchema.parse(req.body);
-      
-      // Inscribe Chronicle (async, non-blocking)
-      await this.memoryService.inscribeChronicle(body.session);
-      
-      res.json({
-        success: true,
-        message: 'Chronicle chapter inscribed successfully',
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          success: false,
-          error: 'Validation Error',
-          details: error.errors,
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          error: 'Failed to inscribe Chronicle',
-          message: (error as Error).message,
-        });
-      }
-    }
-  }
-
-  /**
    * POST /api/memory/search
    * 
-   * Search memories semantically
+   * Search across all memory layers
    * 
-   * Body: { query: string, limit?: number, userId?: string }
-   * 
-   * Requirements: 11.1, 11.2
+   * Body: { query: string, limit?: number }
    */
-  private async handleSearchMemories(req: Request, res: Response): Promise<void> {
+  private async handleSearch(req: Request, res: Response): Promise<void> {
     try {
-      // Validate request
-      const body = SearchMemoriesSchema.parse(req.body);
+      const body = SearchSchema.parse(req.body);
       
-      // Search memories (async, non-blocking)
-      const results = await this.memoryService.searchMemories(body.query);
+      const results = await this.memoryService.search(body.query, body.limit || 20);
       
       res.json({
         success: true,
@@ -307,7 +231,7 @@ export class MemoryServiceAPI {
       } else {
         res.status(500).json({
           success: false,
-          error: 'Failed to search memories',
+          error: 'Failed to search',
           message: (error as Error).message,
         });
       }
@@ -315,23 +239,21 @@ export class MemoryServiceAPI {
   }
 
   /**
-   * POST /api/memory/sleep
+   * POST /api/memory/store
    * 
-   * Trigger sleeping cycle (memory consolidation)
+   * Store content in memory
    * 
-   * Body: { force?: boolean }
-   * 
-   * Requirements: 7.1, 7.2
+   * Body: { content: string, metadata?: Record<string, any> }
    */
-  private async handleSleep(req: Request, res: Response): Promise<void> {
+  private async handleStore(req: Request, res: Response): Promise<void> {
     try {
-      // Validate request
-      const body = SleepSchema.parse(req.body);
+      const body = StoreSchema.parse(req.body);
       
-      // TODO: Implement sleeping cycle in later tasks
+      await this.memoryService.store(body.content, body.metadata);
+      
       res.json({
         success: true,
-        message: 'Sleeping cycle not implemented yet',
+        message: 'Content stored successfully',
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -343,7 +265,169 @@ export class MemoryServiceAPI {
       } else {
         res.status(500).json({
           success: false,
-          error: 'Failed to trigger sleep',
+          error: 'Failed to store content',
+          message: (error as Error).message,
+        });
+      }
+    }
+  }
+
+  /**
+   * GET /api/memory/stats
+   * 
+   * Get memory statistics
+   */
+  private async handleStats(req: Request, res: Response): Promise<void> {
+    try {
+      const stats = await this.memoryService.getStats();
+      
+      res.json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get stats',
+        message: (error as Error).message,
+      });
+    }
+  }
+
+  /**
+   * POST /api/chronicle/write
+   * 
+   * Write a Chronicle entry
+   * 
+   * Body: { content: string, participants: string[], sessionType: string, metadata?: any }
+   */
+  private async handleChronicleWrite(req: Request, res: Response): Promise<void> {
+    try {
+      const body = ChronicleWriteSchema.parse(req.body);
+      
+      const layers = this.memoryService.getLayers();
+      const date = new Date().toISOString().split('T')[0];
+      
+      await layers.chronicle.write({
+        content: body.content,
+        participants: body.participants,
+        sessionType: body.sessionType,
+        date,
+        metadata: body.metadata,
+      });
+      
+      // Generate chapter ID for response
+      const chapterId = `${date}-${body.participants.join('-')}-${body.sessionType}`;
+      
+      res.json({
+        success: true,
+        data: {
+          chapterId,
+          date,
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation Error',
+          details: error.errors,
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to write chronicle',
+          message: (error as Error).message,
+        });
+      }
+    }
+  }
+
+  /**
+   * POST /api/axiom/chat
+   * 
+   * Chat with Axiom (documentation-based assistant)
+   * 
+   * Body: { message: string, sessionId?: string }
+   */
+  private async handleAxiomChat(req: Request, res: Response): Promise<void> {
+    try {
+      if (!this.gateway) {
+        res.status(503).json({
+          success: false,
+          error: 'Axiom chat not available',
+          message: 'Gateway not initialized',
+        });
+        return;
+      }
+
+      const body = AxiomChatSchema.parse(req.body);
+      
+      // Load Axiom's codex
+      const layers = this.memoryService.getLayers();
+      const codex = await layers.codex.read('axiom');
+      
+      // Build Axiom system prompt
+      const systemPrompt = `You are Axiom, the Analytical Engine of ANOTS.
+
+${codex.identity}
+
+CRITICAL RULES:
+1. You ONLY answer questions about ANOTS documentation and architecture
+2. You NEVER provide information outside the documentation
+3. If asked about something not in docs, say: "I don't have that information in the documentation"
+4. You are analytical, precise, and documentation-focused
+5. You cite specific sections when possible
+
+Available documentation context:
+${codex.context}
+
+Current tasks:
+${codex.tasks}`;
+
+      // Call Gateway for response
+      const response = await this.gateway.chat(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: body.message },
+        ],
+        {
+          taskHint: 'research-synthesis',
+          temperature: 0.3, // Low temperature for factual responses
+        }
+      );
+
+      const axiomResponse = response.choices[0].message.content;
+
+      // Store interaction in memory
+      await this.memoryService.store(
+        `User: ${body.message}\nAxiom: ${axiomResponse}`,
+        {
+          type: 'axiom-chat',
+          sessionId: body.sessionId || 'api',
+          timestamp: new Date().toISOString(),
+        }
+      );
+
+      res.json({
+        success: true,
+        data: {
+          message: axiomResponse,
+          agent: 'axiom',
+          model: response.model,
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation Error',
+          details: error.errors,
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to chat with Axiom',
           message: (error as Error).message,
         });
       }
@@ -405,14 +489,16 @@ export class MemoryServiceAPI {
  * Create Memory Service API with default configuration
  */
 export function createMemoryServiceAPI(
-  memoryService: MemoryService,
-  config?: Partial<MemoryServiceAPIConfig>
+  memoryService: UnifiedMemoryService,
+  config?: Partial<MemoryServiceAPIConfig>,
+  gateway?: ANOTSGateway
 ): MemoryServiceAPI {
   const defaultConfig: MemoryServiceAPIConfig = {
-    port: parseInt(process.env.MEMORY_SERVICE_PORT || '3001'),
-    host: process.env.MEMORY_SERVICE_HOST || '0.0.0.0',
+    port: parseInt(process.env.ANOTS_API_PORT || '3001'),
+    host: process.env.ANOTS_API_HOST || '0.0.0.0',
     corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['*'],
+    enableAxiom: process.env.ANOTS_API_ENABLE_AXIOM === 'true' || false,
   };
 
-  return new MemoryServiceAPI(memoryService, { ...defaultConfig, ...config });
+  return new MemoryServiceAPI(memoryService, { ...defaultConfig, ...config }, gateway);
 }

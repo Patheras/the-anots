@@ -16,6 +16,8 @@ import { startAxiomChat, askAxiom } from './axiom-chat';
 import { MCPServer } from '../mcp/MCPServer';
 import { registerAllTools } from '../mcp/tools';
 import { config } from '../core/config';
+import { createMemoryServiceAPI } from '../api/MemoryServiceAPI';
+import { ANOTSGateway } from '../gateway/ANOTSGateway';
 
 const program = new Command();
 
@@ -449,6 +451,87 @@ program
       
     } catch (error) {
       console.error(theme.error(`Failed to list tools: ${(error as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+// API Server commands
+program
+  .command('api:start')
+  .description('Start REST API server (with optional Axiom chat)')
+  .option('-p, --port <port>', 'API port', '3001')
+  .option('--axiom', 'Enable Axiom chat endpoint')
+  .action(async (options: { port: string; axiom?: boolean }) => {
+    try {
+      console.log(theme.header('Starting API Server'));
+      console.log('');
+      
+      // Initialize memory service
+      const memory = await initMemoryService();
+      
+      // Initialize gateway if Axiom enabled
+      let gateway: ANOTSGateway | undefined;
+      if (options.axiom) {
+        console.log(theme.info('▸ Initializing Gateway for Axiom...'));
+        gateway = new ANOTSGateway({
+          zaiApiKey: config.zaiApiKey,
+          zaiBaseUrl: config.zaiBaseUrl || 'https://api.z.ai/api/coding/paas/v4',
+          zaiModel: config.zaiModel || 'glm-5-pro',
+          ollamaBaseUrl: config.ollamaBaseUrl,
+          ollamaModel: config.ollamaModel,
+          openrouterApiKey: process.env.OPENROUTER_API_KEY,
+          openrouterBaseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
+          openrouterModel: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+        });
+        await gateway.initialize();
+        console.log(theme.success('✓ Gateway initialized'));
+        console.log('');
+      }
+      
+      // Create API server
+      const api = createMemoryServiceAPI(
+        memory,
+        {
+          port: parseInt(options.port),
+          host: '0.0.0.0',
+          enableAxiom: options.axiom,
+        },
+        gateway
+      );
+      
+      console.log(theme.info(`▸ Starting API server on port ${options.port}...`));
+      await api.start();
+      
+      console.log(theme.success('✓ API Server running'));
+      console.log('');
+      console.log(theme.subheader('Available Endpoints:'));
+      console.log(theme.bullet(`GET  http://localhost:${options.port}/api/health`));
+      console.log(theme.bullet(`POST http://localhost:${options.port}/api/memory/search`));
+      console.log(theme.bullet(`POST http://localhost:${options.port}/api/memory/store`));
+      console.log(theme.bullet(`GET  http://localhost:${options.port}/api/memory/stats`));
+      console.log(theme.bullet(`POST http://localhost:${options.port}/api/chronicle/write`));
+      
+      if (options.axiom) {
+        console.log(theme.bullet(`POST http://localhost:${options.port}/api/axiom/chat ${colors.success('(Axiom enabled)')}`));
+      }
+      
+      console.log('');
+      console.log(colors.dimText('Press Ctrl+C to stop'));
+      console.log('');
+      
+      // Keep process alive
+      process.on('SIGINT', async () => {
+        console.log(theme.warning('\n\n⚠ Shutting down API server...'));
+        await api.stop();
+        if (gateway) {
+          await gateway.shutdown();
+        }
+        await cleanup();
+        process.exit(0);
+      });
+      
+    } catch (error) {
+      console.error(theme.error(`API server failed: ${(error as Error).message}`));
       process.exit(1);
     }
   });
