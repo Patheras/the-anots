@@ -11,3 +11,7 @@
 hasOwnProperty
 
 __defineGetter__$__looku
+
+{x{!%y%| "R{ # ~&'"~#
+
+yconstructorh
