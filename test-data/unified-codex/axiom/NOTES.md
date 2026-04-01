@@ -6,8 +6,4 @@
 
 ---
 
-*Last Updated: 2026-04-01T15:20:41.865Z*
-
-## Axiom Note
-
-Axiom-specific note
+*Last Updated: 2026-04-01T15:20:42.782Z*
