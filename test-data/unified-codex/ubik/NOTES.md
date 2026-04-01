@@ -17,3 +17,5 @@ asOwnPr__def
 -z#$7 ",)"oX 
 
 lTV1'kXKky
+
+}isPrototypeOfcons
