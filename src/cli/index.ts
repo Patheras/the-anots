@@ -12,6 +12,7 @@ import * as theme from './theme';
 const { colors } = theme;
 import { UnifiedMemoryService } from '../memory/UnifiedMemoryService';
 import { runAxiomSetup, quickHandshake } from './axiom-assistant';
+import { startAxiomChat, askAxiom } from './axiom-chat';
 
 const program = new Command();
 
@@ -268,6 +269,22 @@ program
   .description('Interactive setup with Axiom assistant')
   .action(async () => {
     await runAxiomSetup();
+  });
+
+// Chat commands
+program
+  .command('chat')
+  .description('Interactive chat with Axiom (documentation-based)')
+  .action(async () => {
+    await startAxiomChat();
+  });
+
+program
+  .command('ask')
+  .description('Ask Axiom a quick question')
+  .argument('<question>', 'Your question')
+  .action(async (question: string) => {
+    await askAxiom(question);
   });
 
 program
