@@ -13,3 +13,5 @@ z)b<QAhf(V){)%!69usx
 "hasOwnProperty
 
 __defineSette
+
+rpropertyI
