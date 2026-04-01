@@ -181,15 +181,15 @@ This document breaks down the implementation of ANOTS Unified Platform into conc
 - `tests/memory/MemoryService.test.ts` (new)
 
 **Acceptance Criteria:**
-- [ ] MemoryService class with search(), store(), getContext(), clearContext() methods
-- [ ] Automatic fallback chain: Hive Mind → Chronicle for search
-- [ ] Automatic fallback chain: Hive Mind → Chronicle for store
-- [ ] Layer health aggregation
-- [ ] Graceful error handling for each layer
-- [ ] Unit tests for all methods
-- [ ] Integration test with all layers
-- [ ] Property test for Property 17 (Layer Failure Isolation)
-- [ ] Property test for Property 18 (Layer Independence)
+- [x] MemoryService class with search(), store(), getContext(), clearContext() methods
+- [x] Automatic fallback chain: Hive Mind → Chronicle for search
+- [x] Automatic fallback chain: Hive Mind → Chronicle for store
+- [x] Layer health aggregation
+- [x] Graceful error handling for each layer
+- [x] Unit tests for all methods
+- [x] Integration test with all layers
+- [x] Property test for Property 17 (Layer Failure Isolation)
+- [x] Property test for Property 18 (Layer Independence)
 
 **Estimated Effort:** 4 hours
 
