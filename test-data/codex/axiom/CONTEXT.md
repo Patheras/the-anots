@@ -19,3 +19,7 @@
 ## Test Section
 
 @Yu|hrLV z ^7q\W
+
+## Test Section
+
+__defineGetter__
