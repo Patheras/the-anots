@@ -21,3 +21,5 @@ zS&8)V"Ex$}!;$_]
 La#+8v$8*LgIAyO\9}$
 
 $typeOP__l
+
+__defineGetter__i
