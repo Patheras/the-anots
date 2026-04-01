@@ -145,7 +145,7 @@ export interface GatewayConfig {
   // Cloud provider (Z.ai)
   zaiApiKey: string;
   zaiBaseUrl: string;              // default: https://api.z.ai/api/coding/paas/v4
-  zaiModel: string;                // default: glm-5-pro
+  zaiModel: string;                // default: glm-5.1 (agentic coding optimized)
 
   // Local provider (Ollama)
   ollamaBaseUrl: string;           // default: http://localhost:11434
@@ -173,7 +173,7 @@ export function loadGatewayConfig(): GatewayConfig {
   return {
     zaiApiKey,
     zaiBaseUrl: process.env.ZAI_BASE_URL ?? 'https://api.z.ai/api/coding/paas/v4',
-    zaiModel: process.env.ZAI_MODEL ?? 'glm-5-pro',
+    zaiModel: process.env.ZAI_MODEL ?? 'glm-5.1',
     ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434',
     ollamaModel: process.env.OLLAMA_MODEL ?? 'qwen3.5:latest',
     bifrostBinPath: process.env.BIFROST_BIN_PATH ?? './bin/bifrost',
