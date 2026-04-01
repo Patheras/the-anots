@@ -97,11 +97,15 @@ export async function initializeNodeCodex(node: AgentNode): Promise<void> {
     // Initialize Git repository
     const git = await initGitRepo(directory);
     
-    // Add all files and commit
-    await git.add('.');
-    await git.commit(`Initialize ${node} Codex`);
-    
-    console.log(`✅ ${node} Codex initialized successfully`);
+    // Add all files and commit (ignore errors if files are in .gitignore)
+    try {
+      await git.add('.');
+      await git.commit(`Initialize ${node} Codex`);
+      console.log(`✅ ${node} Codex initialized with Git versioning`);
+    } catch (gitError) {
+      // Git commit failed (likely .gitignore issue), but files are created
+      console.warn(`⚠ ${node} Codex initialized without Git versioning:`, (gitError as Error).message);
+    }
     
   } catch (error) {
     console.error(`Failed to initialize ${node} Codex:`, error);

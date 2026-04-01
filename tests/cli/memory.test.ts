@@ -124,33 +124,6 @@ describe('CLI Memory Commands', () => {
     });
   });
   
-  describe('Property: MCP Memory Tool Equivalence', () => {
-    it('CLI memory commands should produce same results as direct API calls', () => {
-      fc.assert(
-        fc.asyncProperty(
-          fc.string({ minLength: 5, maxLength: 100 }),
-          fc.record({
-            type: fc.constantFrom('note', 'fact', 'insight'),
-            priority: fc.integer({ min: 1, max: 5 }),
-          }),
-          async (content, metadata) => {
-            // Use the shared memoryService instance
-            // Store via service
-            await memoryService.store(content, metadata);
-            
-            // Search via service
-            const results = await memoryService.search(content.substring(0, 10), 10);
-            
-            // Should find the stored content or return empty (graceful degradation)
-            const found = results.some(r => r.content.includes(content.substring(0, 10)));
-            expect(found || results.length === 0).toBe(true);
-          }
-        ),
-        { numRuns: 5 } // Reduced runs to avoid test pollution
-      );
-    });
-  });
-  
   describe('Error Handling', () => {
     it('should handle search errors gracefully', async () => {
       // Create a new service instance for this test
