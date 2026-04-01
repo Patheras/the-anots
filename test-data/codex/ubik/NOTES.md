@@ -6,4 +6,6 @@
 
 ---
 
-*Last Updated: 2026-04-01T23:06:09.836Z*
+*Last Updated: 2026-04-01T23:06:10.867Z*
+
+hasOwnProperty
