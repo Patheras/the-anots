@@ -153,3 +153,6 @@ export function getDefaultConfig(): DeploymentConfig {
     logLevel: 'info',
   };
 }
+
+// Export singleton config instance
+export const config = loadConfig();

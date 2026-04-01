@@ -13,6 +13,9 @@ const { colors } = theme;
 import { UnifiedMemoryService } from '../memory/UnifiedMemoryService';
 import { runAxiomSetup, quickHandshake } from './axiom-assistant';
 import { startAxiomChat, askAxiom } from './axiom-chat';
+import { MCPServer } from '../mcp/MCPServer';
+import { registerAllTools } from '../mcp/tools';
+import { config } from '../core/config';
 
 const program = new Command();
 
@@ -311,6 +314,141 @@ program
       console.log('');
     } catch (error) {
       console.error(theme.error(`Status check failed: ${(error as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+// MCP Server commands
+program
+  .command('mcp:start')
+  .description('Start MCP server (Model Context Protocol)')
+  .option('--auth', 'Enable API key authentication')
+  .option('--keys <keys>', 'Comma-separated API keys (if auth enabled)')
+  .action(async (options: { auth?: boolean; keys?: string }) => {
+    try {
+      console.log(theme.header('Starting MCP Server'));
+      console.log('');
+      
+      // Initialize memory service
+      const memory = await initMemoryService();
+      
+      // Parse API keys from environment or options
+      let apiKeys: string[] = [];
+      let authEnabled = options.auth || config.mcpAuthEnabled;
+      
+      if (authEnabled) {
+        if (options.keys) {
+          apiKeys = options.keys.split(',').map(k => k.trim());
+        } else if (config.mcpApiKeys) {
+          apiKeys = config.mcpApiKeys; // Already an array
+        }
+        
+        if (apiKeys.length === 0) {
+          console.log(theme.warning('⚠ Auth enabled but no API keys provided. Disabling auth.'));
+          authEnabled = false;
+        }
+      }
+      
+      // Create MCP server
+      const mcpServer = new MCPServer({
+        name: 'anots-mcp-server',
+        version: '1.0.0',
+        transport: 'stdio',
+        authEnabled,
+        apiKeys,
+        enableLogging: true,
+      });
+      
+      // Register all tools
+      console.log(theme.info('▸ Registering MCP tools...'));
+      await registerAllTools(mcpServer, memory);
+      
+      const tools = mcpServer.getTools();
+      console.log(theme.success(`✓ Registered ${tools.length} tools`));
+      console.log('');
+      
+      if (authEnabled) {
+        console.log(theme.info(`▸ Authentication: ${colors.success('ENABLED')} (${apiKeys.length} keys)`));
+      } else {
+        console.log(theme.info(`▸ Authentication: ${colors.dimText('DISABLED')}`));
+      }
+      console.log('');
+      
+      // Initialize and start server
+      console.log(theme.info('▸ Starting MCP server (stdio transport)...'));
+      await mcpServer.initialize();
+      
+      console.log(theme.success('✓ MCP Server running'));
+      console.log(colors.dimText('Press Ctrl+C to stop'));
+      console.log('');
+      
+      // Keep process alive
+      process.on('SIGINT', async () => {
+        console.log(theme.warning('\n\n⚠ Shutting down MCP server...'));
+        await mcpServer.shutdown();
+        await cleanup();
+        process.exit(0);
+      });
+      
+    } catch (error) {
+      console.error(theme.error(`MCP server failed: ${(error as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('mcp:tools')
+  .description('List available MCP tools')
+  .action(async () => {
+    try {
+      console.log(theme.header('Available MCP Tools'));
+      console.log('');
+      
+      // Initialize memory service
+      const memory = await initMemoryService();
+      
+      // Create temporary server to get tool list
+      const mcpServer = new MCPServer({
+        name: 'anots-mcp-server',
+        version: '1.0.0',
+        transport: 'stdio',
+        enableLogging: false,
+      });
+      
+      await registerAllTools(mcpServer, memory);
+      const tools = mcpServer.getTools();
+      
+      // Group tools by category
+      const categories: Record<string, string[]> = {
+        memory: [],
+        chronicle: [],
+        gateway: [],
+        codex: [],
+        system: [],
+      };
+      
+      tools.forEach(tool => {
+        const category = tool.split('/')[1];
+        if (categories[category]) {
+          categories[category].push(tool);
+        }
+      });
+      
+      // Display tools by category
+      Object.entries(categories).forEach(([category, toolList]) => {
+        if (toolList.length > 0) {
+          console.log(theme.subheader(`${category.toUpperCase()}:`));
+          toolList.forEach(tool => {
+            console.log(theme.bullet(tool));
+          });
+          console.log('');
+        }
+      });
+      
+      console.log(theme.success(`Total: ${tools.length} tools`));
+      
+    } catch (error) {
+      console.error(theme.error(`Failed to list tools: ${(error as Error).message}`));
       process.exit(1);
     }
   });

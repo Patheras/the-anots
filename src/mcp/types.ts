@@ -21,6 +21,8 @@ export interface MCPServerConfig {
   transport: MCPTransport;
   port?: number; // For HTTP transport
   enableLogging?: boolean;
+  authEnabled?: boolean; // Enable API key authentication
+  apiKeys?: string[]; // Allowed API keys (if auth enabled)
 }
 
 /**
@@ -35,7 +37,16 @@ export interface MCPToolDefinition {
 /**
  * MCP Tool handler - uses CallToolResult from SDK
  */
-export type MCPToolHandler = (args: any, clientId?: string) => Promise<CallToolResult>;
+export type MCPToolHandler = (args: any, context?: MCPRequestContext) => Promise<CallToolResult>;
+
+/**
+ * MCP Request context (includes auth info)
+ */
+export interface MCPRequestContext {
+  clientId?: string;
+  authenticated: boolean;
+  apiKey?: string;
+}
 
 /**
  * MCP Tool registration
