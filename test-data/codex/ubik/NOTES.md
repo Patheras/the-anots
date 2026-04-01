@@ -15,3 +15,7 @@ isPrototypeOf
 ## Test Section
 
 pQCfW|"T@*2?%#L)
+
+## Test Section
+
+oLocaleStrinStoLocaleString
