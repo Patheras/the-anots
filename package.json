@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "TCAM Memory System - Resilient 4-Layer Architecture",
   "main": "dist/index.js",
+  "bin": {
+    "anots": "./dist/cli/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "ts-node src/index.ts",
@@ -39,9 +42,10 @@
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
     "fast-check": "^3.23.0",
-    "inquirer": "^12.3.0",
+    "inquirer": "^12.11.1",
     "js-yaml": "^4.1.0",
     "mem0ai": "^2.4.2",
+    "ora": "^9.3.0",
     "puppeteer": "^24.40.0",
     "redis": "^4.7.1",
     "simple-git": "^3.33.0",
