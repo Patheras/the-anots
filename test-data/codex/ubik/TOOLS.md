@@ -11,3 +11,5 @@
 __defineGett
 
 g$R$/&~Qu}A$[ {?Qmz$&$dy#}$
+
+propertyIsEnume
