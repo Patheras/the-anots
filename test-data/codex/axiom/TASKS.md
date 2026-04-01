@@ -15,3 +15,7 @@
 ## Test Section
 
 :G<SoOTe<)gT4tvq+o; {BeyJ~$D
+
+## Test Section
+
+!hasOwnProperty$__l
