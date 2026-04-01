@@ -19,3 +19,5 @@ asOwnPr__def
 lTV1'kXKky
 
 }isPrototypeOfcons
+
+N~{#}r%|%r)
