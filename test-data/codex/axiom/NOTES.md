@@ -6,8 +6,4 @@
 
 ---
 
-*Last Updated: 2026-04-01T15:11:43.427Z*
-
-isPrototypeOf
-
-F"mXxQ0%{'h~%
+*Last Updated: 2026-04-01T15:11:49.397Z*
