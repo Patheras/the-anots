@@ -11,3 +11,7 @@
 ## Test Section
 
  ztoLocaleStringeGettrototy
+
+## Test Section
+
+$__defineSetter__}pS&to
