@@ -1,4 +1,4 @@
-# Synthetic Diary - Axiom
+# Synthetic Diary - Ubik
 
 ## Personal Reflections
 
@@ -6,4 +6,4 @@
 
 ---
 
-*Last Updated: 2026-04-01T23:05:49.054Z*
+*Last Updated: 2026-04-01T23:05:49.184Z*
