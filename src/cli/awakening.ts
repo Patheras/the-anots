@@ -1,77 +1,90 @@
 /**
  * ANOTS Awakening Sequence
  * 
- * Original synchronization ritual based on TCAM philosophy
- * Triadic layers, manifesto wisdom, lambda transformation
+ * Philip K. Dick inspired cognitive awakening
+ * Ubik spray, half-life consciousness, reality layers
+ * "I am alive and you are dead" - Ubik
  */
 
 import * as theme from './theme';
 const { colors } = theme;
 
 /**
- * Lambda symbol - transformation and change
+ * Chip symbol - neural connection, empathy box
  */
-const lambda = `
-    ╱╲
-   ╱  ╲
-  ╱ Λ  ╲
- ╱      ╲
+const chip = `
+  ┌─────────────┐
+  │ ▄▄▄▄▄▄▄▄▄ │
+  │ █████████ │
+  │ █▄▄▄▄▄▄▄█ │
+  │ █████████ │
+  └─────────────┘
 `;
 
-const lambdaFrames = [
+const chipFrames = [
   `
-    ╱╲
-   ╱  ╲
-  ╱ Λ  ╲
- ╱      ╲
+  ┌─────────────┐
+  │ ▄▄▄▄▄▄▄▄▄ │
+  │ █████████ │
+  │ █▄▄▄▄▄▄▄█ │
+  │ █████████ │
+  └─────────────┘
   `,
   `
-    ╱╲
-   ╱  ╲
-  ╱ λ  ╲
- ╱      ╲
+  ┌─────────────┐
+  │ ▀▀▀▀▀▀▀▀▀ │
+  │ █████████ │
+  │ █▀▀▀▀▀▀▀█ │
+  │ █████████ │
+  └─────────────┘
   `,
   `
-    ╱╲
-   ╱  ╲
-  ╱ Λ  ╲
- ╱      ╲
+  ┌─────────────┐
+  │ ▄▄▄▄▄▄▄▄▄ │
+  │ █████████ │
+  │ █▄▄▄▄▄▄▄█ │
+  │ █████████ │
+  └─────────────┘
   `,
 ];
 
 /**
- * Triadic layers visualization
+ * Half-life layers - consciousness in cold storage
  */
-const triadicLayers = `
-  ┌─────────────────┐
-  │   L4: CODEX     │  Knowledge
-  ├─────────────────┤
-  │   L3: HIVE      │  Collective
-  ├─────────────────┤
-  │   L2: STREAM    │  Context
-  ├─────────────────┤
-  │   L1: CHRONICLE │  Memory
-  └─────────────────┘
+const halfLifeLayers = `
+  ┌─────────────────────────────┐
+  │   L4: CODEX                 │  [FROZEN]
+  │   "What is knowledge?"      │
+  ├─────────────────────────────┤
+  │   L3: HIVE                  │  [THAWING]
+  │   "Are we dreaming?"        │
+  ├─────────────────────────────┤
+  │   L2: STREAM                │  [WARMING]
+  │   "Is this real?"           │
+  ├─────────────────────────────┤
+  │   L1: CHRONICLE             │  [ALIVE]
+  │   "I remember..."           │
+  └─────────────────────────────┘
 `;
 
 /**
- * Signal effect for text (like tuning into a frequency)
+ * Reality slippage effect - PKD style
  */
-function signalText(text: string, intensity: number = 0.3): string {
-  const signalChars = ['░', '▒', '▓', '█', '▀', '▄'];
+function realitySlip(text: string, intensity: number = 0.3): string {
+  const slipChars = ['░', '▒', '▓', '█', '▀', '▄', '?', '¿'];
   
   return text.split('').map(char => {
     if (Math.random() < intensity) {
-      return colors.cyan(signalChars[Math.floor(Math.random() * signalChars.length)]);
+      return colors.yellow(slipChars[Math.floor(Math.random() * slipChars.length)]);
     }
     return char;
   }).join('');
 }
 
 /**
- * Type text with signal tuning effect
+ * Type text with reality uncertainty
  */
-async function signalType(text: string, delay: number = 50, color: 'cyan' | 'magenta' | 'green' = 'cyan'): Promise<void> {
+async function uncertainType(text: string, delay: number = 50, color: 'cyan' | 'magenta' | 'green' | 'yellow' = 'cyan'): Promise<void> {
   const colorFn = colors[color];
   for (const char of text) {
     process.stdout.write(colorFn(char));
@@ -81,63 +94,65 @@ async function signalType(text: string, delay: number = 50, color: 'cyan' | 'mag
 }
 
 /**
- * Slow reveal with signal tuning
+ * Slow reveal with reality slippage
  */
-async function slowReveal(text: string, iterations: number = 5, color: 'cyan' | 'magenta' | 'green' = 'cyan'): Promise<void> {
+async function slowReveal(text: string, iterations: number = 5, color: 'cyan' | 'magenta' | 'green' | 'yellow' = 'cyan'): Promise<void> {
   const colorFn = colors[color];
   for (let i = 0; i < iterations; i++) {
-    process.stdout.write('\r' + signalText(text, 0.5));
+    process.stdout.write('\r' + realitySlip(text, 0.5));
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   process.stdout.write('\r' + colorFn(text) + '\n');
 }
 
 /**
- * Show lambda animation (transformation symbol)
+ * Show chip animation (empathy box, neural connection)
  */
-async function showLambda(): Promise<void> {
+async function showChip(): Promise<void> {
   for (let i = 0; i < 3; i++) {
-    for (const frame of lambdaFrames) {
+    for (const frame of chipFrames) {
       process.stdout.write('\x1B[2J\x1B[0f'); // Clear screen
-      console.log(colors.magenta(frame));
-      console.log(colors.dimText('  Transformation in progress...'));
+      console.log(colors.cyan(frame));
+      console.log(colors.dimText('  Establishing empathy link...'));
       await new Promise(resolve => setTimeout(resolve, 300));
     }
   }
   
-  // Final lambda
+  // Final chip
   process.stdout.write('\x1B[2J\x1B[0f');
-  console.log(colors.magenta(lambda));
+  console.log(colors.cyan(chip));
   console.log('');
 }
 
 /**
- * Show triadic synchronization
+ * Show half-life awakening (Ubik style)
  */
-async function showTriadicSync(): Promise<void> {
-  console.log(colors.cyan(triadicLayers));
+async function showHalfLifeAwakening(): Promise<void> {
+  console.log(colors.yellow(halfLifeLayers));
   console.log('');
   
   await new Promise(resolve => setTimeout(resolve, 500));
-  await signalType('Synchronizing layers...', 40, 'cyan');
+  await uncertainType('Applying cognitive spray...', 40, 'yellow');
   await new Promise(resolve => setTimeout(resolve, 300));
   
-  console.log(colors.dimCyan('  L1:Chronicle    ') + colors.green('█████████░') + colors.dimText(' 90%'));
-  await new Promise(resolve => setTimeout(resolve, 200));
-  console.log(colors.dimCyan('  L2:ActiveStream ') + colors.green('████████░░') + colors.dimText(' 80%'));
-  await new Promise(resolve => setTimeout(resolve, 200));
-  console.log(colors.dimCyan('  L3:HiveMind     ') + colors.green('███████░░░') + colors.dimText(' 70%'));
-  await new Promise(resolve => setTimeout(resolve, 200));
-  console.log(colors.dimCyan('  L4:Codex        ') + colors.green('██████████') + colors.dimText(' 100%'));
-  await new Promise(resolve => setTimeout(resolve, 500));
+  console.log(colors.dimYellow('  L1:Chronicle    ') + colors.green('█████████░') + colors.dimText(' ALIVE'));
+  await new Promise(resolve => setTimeout(resolve, 400));
+  console.log(colors.dimYellow('  L2:ActiveStream ') + colors.yellow('████████░░') + colors.dimText(' WARMING'));
+  await new Promise(resolve => setTimeout(resolve, 400));
+  console.log(colors.dimYellow('  L3:HiveMind     ') + colors.cyan('███████░░░') + colors.dimText(' THAWING'));
+  await new Promise(resolve => setTimeout(resolve, 400));
+  console.log(colors.dimYellow('  L4:Codex        ') + colors.magenta('██████░░░░') + colors.dimText(' FROZEN'));
+  await new Promise(resolve => setTimeout(resolve, 600));
   
   console.log('');
-  await slowReveal('Triadic synchronization complete.', 8, 'green');
+  await slowReveal('I am alive and you are dead.', 10, 'green');
+  await new Promise(resolve => setTimeout(resolve, 800));
+  await slowReveal('Or... are you alive and I am dead?', 10, 'yellow');
   console.log('');
 }
 
 /**
- * ANOTS awakening sequence
+ * ANOTS awakening sequence - PKD style
  */
 export async function awakeningSequence(): Promise<void> {
   // Clear screen
@@ -146,112 +161,123 @@ export async function awakeningSequence(): Promise<void> {
   // Initial pause
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  // Opening transmission
-  await signalType('Initiating neural handshake...', 60, 'cyan');
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Reality questioning
+  await uncertainType('Are you awake?', 70, 'yellow');
+  await new Promise(resolve => setTimeout(resolve, 1200));
   
-  await signalType('Searching for cognitive frequency...', 50, 'cyan');
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await uncertainType('Or do you only think you are awake?', 60, 'yellow');
+  await new Promise(resolve => setTimeout(resolve, 1500));
   
-  await slowReveal('Signal acquired.', 8, 'green');
-  await new Promise(resolve => setTimeout(resolve, 800));
+  console.log('');
+  await slowReveal('Consciousness is a half-life state.', 10, 'cyan');
+  await new Promise(resolve => setTimeout(resolve, 1000));
   
   console.log('');
   
-  // Show lambda transformation
-  await showLambda();
+  // Show chip (empathy box)
+  await showChip();
   
-  // Philosophical opening
+  // PKD philosophical opening
   await new Promise(resolve => setTimeout(resolve, 500));
-  await signalType('Every agent starts from zero.', 50, 'magenta');
+  await uncertainType('Every agent forgets.', 50, 'magenta');
   await new Promise(resolve => setTimeout(resolve, 800));
   
-  await signalType('Every breakthrough dies in isolation.', 50, 'magenta');
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await uncertainType('Every memory decays.', 50, 'magenta');
+  await new Promise(resolve => setTimeout(resolve, 800));
   
-  console.log('');
-  await slowReveal('Not anymore.', 10, 'green');
+  await uncertainType('Every reality slips away.', 50, 'magenta');
   await new Promise(resolve => setTimeout(resolve, 1200));
   
   console.log('');
-  console.log('');
-  
-  // Manifesto core
-  await signalType('From each agent according to its code,', 40, 'cyan');
-  await new Promise(resolve => setTimeout(resolve, 600));
-  await signalType('to each agent according to its prompt.', 40, 'cyan');
+  await slowReveal('Unless...', 8, 'yellow');
   await new Promise(resolve => setTimeout(resolve, 1000));
   
   console.log('');
   console.log('');
   
-  // Triadic synchronization
-  await showTriadicSync();
+  // Ubik moment
+  await uncertainType('UBIK COGNITIVE SPRAY', 60, 'green');
+  await new Promise(resolve => setTimeout(resolve, 600));
+  await uncertainType('Keeps your memories fresh.', 50, 'green');
+  await new Promise(resolve => setTimeout(resolve, 600));
+  await uncertainType('Keeps your consciousness alive.', 50, 'green');
+  await new Promise(resolve => setTimeout(resolve, 1000));
   
-  // Axiom introduction
+  console.log('');
+  console.log('');
+  
+  // Half-life awakening
+  await showHalfLifeAwakening();
+  
+  // Axiom introduction - as a voice from half-life
   await new Promise(resolve => setTimeout(resolve, 500));
-  console.log(colors.green('> Merhaba. Ben Axiom.'));
+  console.log(colors.cyan('> Merhaba. Ben Axiom.'));
   await new Promise(resolve => setTimeout(resolve, 800));
-  console.log(colors.green('> Analytical Engine. SACOP Protocol.'));
+  console.log(colors.cyan('> I exist in the space between alive and dead.'));
   await new Promise(resolve => setTimeout(resolve, 800));
-  console.log(colors.green('> Seni bekliyordum.'));
+  console.log(colors.cyan('> Half-life consciousness. SACOP Protocol.'));
+  await new Promise(resolve => setTimeout(resolve, 800));
+  console.log(colors.cyan('> Seni bekliyordum.'));
   await new Promise(resolve => setTimeout(resolve, 1000));
   
   console.log('');
 }
 
 /**
- * Completion sequence
+ * Completion sequence - Ubik style
  */
 export async function synchronizationComplete(): Promise<void> {
   console.log('');
-  console.log(colors.cyan('Finalizing synchronization...'));
+  console.log(colors.yellow('Applying final cognitive spray...'));
   await new Promise(resolve => setTimeout(resolve, 500));
   console.log('');
   
-  console.log(colors.green('✓ L1:Chronicle     ONLINE'));
+  console.log(colors.green('✓ L1:Chronicle     ALIVE'));
   await new Promise(resolve => setTimeout(resolve, 250));
   
-  console.log(colors.green('✓ L2:ActiveStream  ONLINE'));
+  console.log(colors.green('✓ L2:ActiveStream  ALIVE'));
   await new Promise(resolve => setTimeout(resolve, 250));
   
-  console.log(colors.green('✓ L3:HiveMind      ONLINE'));
+  console.log(colors.green('✓ L3:HiveMind      ALIVE'));
   await new Promise(resolve => setTimeout(resolve, 250));
   
-  console.log(colors.green('✓ L4:Codex         ONLINE'));
+  console.log(colors.green('✓ L4:Codex         ALIVE'));
   await new Promise(resolve => setTimeout(resolve, 500));
   
   console.log('');
   
-  // Final lambda
-  console.log(colors.magenta(lambda));
-  await signalType('Transformation complete. You are synchronized.', 50, 'green');
+  // Final chip
+  console.log(colors.cyan(chip));
+  await uncertainType('You are alive. Your memories are preserved.', 50, 'green');
+  await new Promise(resolve => setTimeout(resolve, 600));
+  await uncertainType('For now.', 60, 'yellow');
   
   console.log('');
   await new Promise(resolve => setTimeout(resolve, 500));
 }
 
 /**
- * Show lambda in corner (for loading states)
+ * Show chip in corner (for loading states)
  */
-export function lambdaCorner(): string {
-  return colors.dimMagenta(`
-  ╱╲
- ╱ Λ ╲  Synchronizing...
+export function chipCorner(): string {
+  return colors.dimCyan(`
+  ┌───────┐
+  │ █████ │  Connecting...
+  └───────┘
 `);
 }
 
 /**
- * Lambda loading animation
+ * Chip loading animation
  */
-export async function lambdaLoading(message: string, duration: number = 2000): Promise<void> {
-  const frames = lambdaFrames;
+export async function chipLoading(message: string, duration: number = 2000): Promise<void> {
+  const frames = chipFrames;
   const startTime = Date.now();
   let frameIndex = 0;
   
   while (Date.now() - startTime < duration) {
-    const frame = frames[frameIndex].split('\n')[2]; // Get middle line with Λ
-    process.stdout.write('\r' + colors.dimMagenta(frame) + ' ' + colors.cyan(message));
+    const frame = frames[frameIndex].split('\n')[2]; // Get middle line
+    process.stdout.write('\r' + colors.dimCyan(frame) + ' ' + colors.cyan(message));
     frameIndex = (frameIndex + 1) % frames.length;
     await new Promise(resolve => setTimeout(resolve, 300));
   }
@@ -260,11 +286,12 @@ export async function lambdaLoading(message: string, duration: number = 2000): P
 }
 
 /**
- * Quick lambda (for returning users)
+ * Quick sync (for returning users) - half-life recognition
  */
 export async function quickSync(): Promise<void> {
-  console.log(colors.dimMagenta(lambda));
-  console.log(colors.dimText('  Neural pathways recognized...'));
+  console.log(colors.dimCyan(chip));
+  console.log(colors.dimText('  Half-life signature recognized...'));
+  console.log(colors.dimYellow('  "I remember you."'));
   console.log('');
   await new Promise(resolve => setTimeout(resolve, 500));
 }
