@@ -19,3 +19,7 @@ propertyIsE
 ## Test Section
 
 __defineGetter
+
+## Test Section
+
+O@4#JK.&B"u=4p
