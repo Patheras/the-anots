@@ -38,6 +38,9 @@ const makeConfig = (binPath: string): GatewayConfig => ({
   zaiApiKey: 'test-key',
   zaiBaseUrl: 'https://api.z.ai',
   zaiModel: 'glm-5-pro',
+  openrouterApiKey: 'test-openrouter-key',
+  openrouterBaseUrl: 'https://openrouter.ai/api/v1',
+  openrouterModel: 'anthropic/claude-3.5-sonnet',
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'qwen3.5:latest',
   bifrostBinPath: binPath,
@@ -47,6 +50,7 @@ const makeConfig = (binPath: string): GatewayConfig => ({
   requestTimeoutMs: 30_000,
   logLevel: 'info',
   cloudEnabled: true,
+  cloudAltEnabled: true,
 });
 
 /** Create a mock child process that emits events on demand */

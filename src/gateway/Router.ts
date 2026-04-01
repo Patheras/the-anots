@@ -21,28 +21,36 @@ import { ModelSelector } from './ModelSelector';
 export class Router {
   private readonly modelSelector: ModelSelector;
   private readonly localModel: string;
+  private readonly cloudAltModel: string;
 
-  constructor(modelSelector?: ModelSelector, localModel = 'qwen3.5:latest') {
+  constructor(
+    modelSelector?: ModelSelector,
+    localModel = 'qwen3.5:latest',
+    cloudAltModel = 'anthropic/claude-3.5-sonnet'
+  ) {
     this.modelSelector = modelSelector ?? new ModelSelector();
     this.localModel = localModel;
+    this.cloudAltModel = cloudAltModel;
   }
 
   /**
    * Produce a deterministic RoutingDecision.
    *
-   * Decision logic:
-   * 1. If entropy=high AND cloud healthy AND quota not exhausted → cloud
-   * 2. Otherwise (low entropy OR quota exhausted OR cloud degraded) → local
-   * 3. If primary is degraded/down → swap to next in fallback chain
-   * 4. If both degraded → fallback chain contains only 'cache' sentinel
+   * Decision logic (3-provider system):
+   * 1. If entropy=high AND cloud healthy AND quota not exhausted → cloud (Z.ai)
+   * 2. If cloud unavailable/exhausted AND cloud-alt healthy → cloud-alt (OpenRouter)
+   * 3. Otherwise (low entropy OR all cloud exhausted/down) → local (Ollama)
+   * 4. Fallback chain: primary → cloud-alt → local → cache
    */
   decide(
     classification: ClassificationResult,
     quotaStatus: QuotaStatus,
     cloudHealth: ProviderHealth,
+    cloudAltHealth: ProviderHealth,
     localHealth: ProviderHealth,
   ): RoutingDecision {
     const cloudAvailable = this.isAvailable(cloudHealth);
+    const cloudAltAvailable = this.isAvailable(cloudAltHealth);
     const localAvailable = this.isAvailable(localHealth);
 
     // Determine preferred provider
@@ -56,29 +64,34 @@ export class Router {
     let fallbackChain: ProviderId[];
 
     if (preferCloud) {
+      // High-entropy task: prefer Z.ai cloud
       selectedProvider = 'cloud';
-      // Use ModelSelector to choose appropriate cloud model based on task
       model = this.modelSelector.selectModel(classification.taskType, classification.entropy);
-      fallbackChain = localAvailable ? ['local'] : [];
+      // Fallback: cloud-alt → local
+      fallbackChain = [];
+      if (cloudAltAvailable) fallbackChain.push('cloud-alt');
+      if (localAvailable) fallbackChain.push('local');
+    } else if (cloudAltAvailable) {
+      // Cloud unavailable/exhausted but cloud-alt available
+      selectedProvider = 'cloud-alt';
+      model = this.cloudAltModel;
+      // Fallback: local → cloud (if quota available)
+      fallbackChain = [];
+      if (localAvailable) fallbackChain.push('local');
+      if (cloudAvailable && !quotaStatus.exhausted) fallbackChain.push('cloud');
+    } else if (localAvailable) {
+      // Low entropy or all cloud providers unavailable
+      selectedProvider = 'local';
+      model = this.localModel;
+      // Fallback: cloud-alt → cloud (if quota available)
+      fallbackChain = [];
+      if (cloudAltAvailable) fallbackChain.push('cloud-alt');
+      if (cloudAvailable && !quotaStatus.exhausted) fallbackChain.push('cloud');
     } else {
-      // Low entropy, quota exhausted, or cloud unavailable
-      if (localAvailable) {
-        selectedProvider = 'local';
-        model = this.localModel;
-        // Cloud as fallback only if available and quota not exhausted
-        fallbackChain = cloudAvailable && !quotaStatus.exhausted ? ['cloud'] : [];
-      } else if (cloudAvailable && !quotaStatus.exhausted) {
-        // Local down, fall back to cloud even for low-entropy
-        selectedProvider = 'cloud';
-        // Use appropriate model tier for the task
-        model = this.modelSelector.selectModel(classification.taskType, classification.entropy);
-        fallbackChain = [];
-      } else {
-        // Both unavailable - no live provider, cache only
-        selectedProvider = 'local'; // nominal, will fail and use cache
-        model = this.localModel;
-        fallbackChain = [];
-      }
+      // All providers unavailable - will use cache
+      selectedProvider = 'local'; // nominal
+      model = this.localModel;
+      fallbackChain = [];
     }
 
     return {

@@ -40,7 +40,7 @@ export interface ClassificationResult {
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-export type ProviderId = 'cloud' | 'local';
+export type ProviderId = 'cloud' | 'cloud-alt' | 'local';
 export type ProviderStatus = 'healthy' | 'degraded' | 'down';
 
 export interface ProviderHealth {
@@ -147,6 +147,11 @@ export interface GatewayConfig {
   zaiBaseUrl: string;              // default: https://api.z.ai/api/coding/paas/v4
   zaiModel: string;                // default: glm-5.1 (agentic coding optimized)
 
+  // Cloud alternative provider (OpenRouter)
+  openrouterApiKey: string;
+  openrouterBaseUrl: string;       // default: https://openrouter.ai/api/v1
+  openrouterModel: string;         // default: anthropic/claude-3.5-sonnet
+
   // Local provider (Ollama)
   ollamaBaseUrl: string;           // default: http://localhost:11434
   ollamaModel: string;             // default: qwen3.5:latest
@@ -163,17 +168,22 @@ export interface GatewayConfig {
   requestTimeoutMs: number;        // default: 30_000
   logLevel: 'info' | 'debug' | 'warn' | 'error';
 
-  // Derived: cloud disabled when ZAI_API_KEY is missing
+  // Derived: providers disabled when API keys are missing
   cloudEnabled: boolean;
+  cloudAltEnabled: boolean;
 }
 
 /** Load GatewayConfig from environment variables with defaults */
 export function loadGatewayConfig(): GatewayConfig {
   const zaiApiKey = process.env.ZAI_API_KEY ?? '';
+  const openrouterApiKey = process.env.OPENROUTER_API_KEY ?? '';
   return {
     zaiApiKey,
     zaiBaseUrl: process.env.ZAI_BASE_URL ?? 'https://api.z.ai/api/coding/paas/v4',
     zaiModel: process.env.ZAI_MODEL ?? 'glm-5.1',
+    openrouterApiKey,
+    openrouterBaseUrl: process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1',
+    openrouterModel: process.env.OPENROUTER_MODEL ?? 'anthropic/claude-3.5-sonnet',
     ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434',
     ollamaModel: process.env.OLLAMA_MODEL ?? 'qwen3.5:latest',
     bifrostBinPath: process.env.BIFROST_BIN_PATH ?? './bin/bifrost',
@@ -183,5 +193,6 @@ export function loadGatewayConfig(): GatewayConfig {
     requestTimeoutMs: parseInt(process.env.REQUEST_TIMEOUT_MS ?? '30000', 10),
     logLevel: (process.env.GATEWAY_LOG_LEVEL as GatewayConfig['logLevel']) ?? 'info',
     cloudEnabled: zaiApiKey.length > 0,
+    cloudAltEnabled: openrouterApiKey.length > 0,
   };
 }

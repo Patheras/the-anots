@@ -62,7 +62,13 @@ export class ANOTSGateway {
     this.config = { ...base, ...config };
 
     if (!this.config.cloudEnabled) {
-      console.warn('[ANOTSGateway] ZAI_API_KEY not set — cloud provider disabled, routing all requests to local');
+      console.warn('[ANOTSGateway] ZAI_API_KEY not set — cloud provider disabled');
+    }
+    if (!this.config.cloudAltEnabled) {
+      console.warn('[ANOTSGateway] OPENROUTER_API_KEY not set — cloud-alt provider disabled');
+    }
+    if (!this.config.cloudEnabled && !this.config.cloudAltEnabled) {
+      console.warn('[ANOTSGateway] No cloud providers configured — routing all requests to local');
     }
 
     this.classifier = new TaskClassifier();
@@ -71,7 +77,7 @@ export class ANOTSGateway {
       sonnet: 'glm-4.7',
       haiku: 'glm-4.5-air',
     });
-    this.router = new Router(modelSelector, this.config.ollamaModel);
+    this.router = new Router(modelSelector, this.config.ollamaModel, this.config.openrouterModel);
     this.quota = new QuotaManager(this.config.quotaLimit, this.config.quotaResetIntervalHours);
     this.health = new GatewayHealthMonitor();
     this.bifrost = new BifrostClient(this.config.bifrostPort);
@@ -109,18 +115,23 @@ export class ANOTSGateway {
     // 2. Get quota + health
     const quotaStatus = this.quota.getQuotaStatus();
     const cloudHealth = this.health.getProviderHealth('cloud');
+    const cloudAltHealth = this.health.getProviderHealth('cloud-alt');
     const localHealth = this.health.getProviderHealth('local');
 
-    // Override cloud health if cloud is disabled
+    // Override cloud health if providers are disabled
     const effectiveCloudHealth = this.config.cloudEnabled
       ? cloudHealth
       : { ...cloudHealth, status: 'down' as const };
+    const effectiveCloudAltHealth = this.config.cloudAltEnabled
+      ? cloudAltHealth
+      : { ...cloudAltHealth, status: 'down' as const };
 
     // 3. Route
     const decision = this.router.decide(
       classification,
       quotaStatus,
       effectiveCloudHealth,
+      effectiveCloudAltHealth,
       localHealth,
     );
     // Stamp the real requestId
@@ -142,7 +153,10 @@ export class ANOTSGateway {
     let providerLatencyMs = 0;
 
     for (const provider of providerOrder) {
-      const model = provider === 'cloud' ? this.config.zaiModel : this.config.ollamaModel;
+      const model = 
+        provider === 'cloud' ? this.config.zaiModel :
+        provider === 'cloud-alt' ? this.config.openrouterModel :
+        this.config.ollamaModel;
       providerStart = Date.now();
 
       try {

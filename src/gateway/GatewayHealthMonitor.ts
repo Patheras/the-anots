@@ -19,21 +19,24 @@ interface HealthRecord {
 
 interface ConsecutiveHealthyCount {
   cloud: number;
+  'cloud-alt': number;
   local: number;
 }
 
 export class GatewayHealthMonitor {
   private readonly records: Map<ProviderId, HealthRecord[]> = new Map([
     ['cloud', []],
+    ['cloud-alt', []],
     ['local', []],
   ]);
 
   private readonly status: Map<ProviderId, ProviderStatus> = new Map([
     ['cloud', 'healthy'],
+    ['cloud-alt', 'healthy'],
     ['local', 'healthy'],
   ]);
 
-  private readonly consecutiveHealthy: ConsecutiveHealthyCount = { cloud: 0, local: 0 };
+  private readonly consecutiveHealthy: ConsecutiveHealthyCount = { cloud: 0, 'cloud-alt': 0, local: 0 };
   private readonly windowMs = 60_000; // 60-second rolling window
   private probeTimer: NodeJS.Timeout | null = null;
 
@@ -102,7 +105,7 @@ export class GatewayHealthMonitor {
 
   private async runProbes(): Promise<void> {
     if (!this.probeProvider) return;
-    for (const provider of ['cloud', 'local'] as ProviderId[]) {
+    for (const provider of ['cloud', 'cloud-alt', 'local'] as ProviderId[]) {
       try {
         const result = await this.probeProvider(provider);
         this.recordRequest(provider, result.latencyMs, result.success);

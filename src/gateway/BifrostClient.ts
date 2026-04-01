@@ -14,12 +14,18 @@ import { ChatMessage, ChatCompletion, ProviderId } from './types';
 export class BifrostClient {
   private readonly baseUrl: string;
   private readonly cloudBreaker: CircuitBreaker;
+  private readonly cloudAltBreaker: CircuitBreaker;
   private readonly localBreaker: CircuitBreaker;
 
   constructor(bifrostPort = 8080) {
     this.baseUrl = `http://localhost:${bifrostPort}`;
     this.cloudBreaker = new CircuitBreaker({
       name: 'gateway-cloud',
+      failureThreshold: 3,
+      timeout: 60_000,
+    });
+    this.cloudAltBreaker = new CircuitBreaker({
+      name: 'gateway-cloud-alt',
       failureThreshold: 3,
       timeout: 60_000,
     });
@@ -40,7 +46,10 @@ export class BifrostClient {
     model: string,
     timeoutMs: number,
   ): Promise<ChatCompletion> {
-    const breaker = provider === 'cloud' ? this.cloudBreaker : this.localBreaker;
+    const breaker = 
+      provider === 'cloud' ? this.cloudBreaker :
+      provider === 'cloud-alt' ? this.cloudAltBreaker :
+      this.localBreaker;
 
     return breaker.execute(async () => {
       const controller = new AbortController();
@@ -75,13 +84,19 @@ export class BifrostClient {
 
   /** Check if a provider's circuit breaker is open */
   isCircuitOpen(provider: ProviderId): boolean {
-    const breaker = provider === 'cloud' ? this.cloudBreaker : this.localBreaker;
+    const breaker = 
+      provider === 'cloud' ? this.cloudBreaker :
+      provider === 'cloud-alt' ? this.cloudAltBreaker :
+      this.localBreaker;
     return breaker.isOpen();
   }
 
   /** Get circuit breaker state for a provider */
   getCircuitState(provider: ProviderId) {
-    const breaker = provider === 'cloud' ? this.cloudBreaker : this.localBreaker;
+    const breaker = 
+      provider === 'cloud' ? this.cloudBreaker :
+      provider === 'cloud-alt' ? this.cloudAltBreaker :
+      this.localBreaker;
     return breaker.getState();
   }
 }
