@@ -11,3 +11,5 @@
 hasOwnProperty
 
 __defineGetter__p
+
+propertyIsEn
