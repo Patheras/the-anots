@@ -10,12 +10,4 @@
 
 ---
 
-*Last Updated: 2026-04-01T23:06:22.007Z*
-
-## Test Section
-
-isPrototypeOf
-
-## Test Section
-
-zOconstructor@
+*Last Updated: 2026-04-01T23:06:32.280Z*
