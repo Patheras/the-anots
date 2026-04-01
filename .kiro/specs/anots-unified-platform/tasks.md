@@ -129,15 +129,15 @@ This document breaks down the implementation of ANOTS Unified Platform into conc
 - `tests/memory/HiveMindService.test.ts` (new)
 
 **Acceptance Criteria:**
-- [ ] HiveMindService class with search(), store() methods
-- [ ] Qdrant client integration (optional, graceful degradation)
-- [ ] Mem0 client integration for fact extraction
-- [ ] File-based vector storage fallback
-- [ ] Embedding generation (local or API)
-- [ ] Health check method
-- [ ] Unit tests with Qdrant mocked
-- [ ] Property test for Property 3 (Memory Search Idempotence)
-- [ ] Property test for Property 4 (Memory Store-Retrieve Round-Trip)
+- [x] HiveMindService class with search(), store() methods
+- [x] Qdrant client integration (optional, graceful degradation)
+- [x] Mem0 client integration for fact extraction
+- [x] File-based vector storage fallback
+- [x] Embedding generation (local or API)
+- [x] Health check method
+- [x] Unit tests with Qdrant mocked
+- [x] Property test for Property 3 (Memory Search Idempotence)
+- [x] Property test for Property 4 (Memory Store-Retrieve Round-Trip)
 
 **Estimated Effort:** 6 hours
 
