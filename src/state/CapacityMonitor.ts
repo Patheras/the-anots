@@ -8,7 +8,7 @@
  */
 
 import {
-  ActiveStreamState,
+  ActiveStreamStateFull as ActiveStreamState,
   CapacityThresholds,
   DEFAULT_CAPACITY_THRESHOLDS,
   estimateTokenCount,

@@ -259,16 +259,15 @@ export class MCPServer implements Service {
   }
 
   /**
-   * Convert Zod schema to JSON Schema
-   * Simplified version - MCP SDK expects JSON Schema format
+   * Convert Zod schema to JSON Schema (real implementation)
    */
-  private zodToJsonSchema(_schema: any): any {
-    // This is a simplified conversion
-    // In production, use a library like zod-to-json-schema
-    return {
-      type: 'object',
-      properties: {},
-      required: [],
-    };
+  private zodToJsonSchema(schema: any): any {
+    try {
+      const { zodToJsonSchema } = require('zod-to-json-schema');
+      return zodToJsonSchema(schema, { target: 'jsonSchema7' });
+    } catch {
+      // Fallback: basic introspection
+      return { type: 'object', properties: {}, additionalProperties: true };
+    }
   }
 }

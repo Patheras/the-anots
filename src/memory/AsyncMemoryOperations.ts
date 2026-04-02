@@ -9,7 +9,6 @@
  */
 
 import { MemoryService } from './MemoryService';
-import { ActiveStreamState } from '../state/types';
 
 /**
  * Async operation types
@@ -250,8 +249,10 @@ export class AsyncMemoryOperations {
         const operation = this.operations.get(operationId);
         if (!operation) continue;
 
-        // Execute operation asynchronously
-        this.executeOperation(operation);
+        // Increment BEFORE launching so maxConcurrent is respected immediately
+        this.runningCount++;
+        // Execute operation asynchronously (fire-and-forget with counter management)
+        this.executeOperation(operation).catch(() => {/* errors handled inside */});
       }
     } finally {
       this.isProcessing = false;
@@ -264,7 +265,7 @@ export class AsyncMemoryOperations {
   private async executeOperation(operation: AsyncOperation): Promise<void> {
     operation.status = 'running';
     operation.startedAt = new Date();
-    this.runningCount++;
+    // runningCount already incremented by processQueue
 
     try {
       if (operation.type === 'extract_truths') {
@@ -293,7 +294,7 @@ export class AsyncMemoryOperations {
     } finally {
       this.runningCount--;
       
-      // Continue processing queue
+      // Continue processing queue if more items waiting
       if (this.queue.length > 0) {
         this.processQueue();
       }

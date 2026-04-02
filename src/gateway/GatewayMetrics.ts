@@ -47,7 +47,7 @@ export class GatewayMetrics {
 
     const perProvider: GatewayMetricsSnapshot['perProvider'] = {};
 
-    for (const provider of ['cloud', 'local'] as ProviderId[]) {
+    for (const provider of ['cloud', 'cloud-alt', 'local'] as ProviderId[]) {
       const providerRecords = this.records.filter(r => r.provider === provider);
       if (providerRecords.length === 0) continue;
 

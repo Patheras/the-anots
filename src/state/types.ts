@@ -85,14 +85,14 @@ export interface RecentTruth {
 }
 
 /**
- * Active Stream State
+ * Active Stream State (Full — legacy MemoryService)
  * 
  * Complete state of the active dialogue session.
  * Stored in Redis with TTL (7 days default).
  * 
  * Requirements: 4.1, 4.4, 4.5
  */
-export interface ActiveStreamState {
+export interface ActiveStreamStateFull {
   // Session metadata
   sessionId: string;
   agentId: string;
@@ -187,7 +187,7 @@ export function createEmptyActiveStreamState(
   sessionId: string,
   agentId: string,
   userId: string
-): ActiveStreamState {
+): ActiveStreamStateFull {
   const now = new Date().toISOString();
   
   return {

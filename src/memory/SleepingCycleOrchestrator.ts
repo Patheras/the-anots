@@ -15,7 +15,7 @@
 
 import { MemoryService } from './MemoryService';
 import { CapacityMonitor } from '../state/CapacityMonitor';
-import { ActiveStreamState, createEmptyActiveStreamState } from '../state/types';
+import { ActiveStreamStateFull as ActiveStreamState, createEmptyActiveStreamState } from '../state/types';
 
 /**
  * Sleeping cycle phase

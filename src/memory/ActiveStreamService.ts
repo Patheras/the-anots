@@ -256,10 +256,18 @@ export class ActiveStreamService implements Service {
   }
 
   /**
-   * Get file path for session
+   * Get file path for session — sanitized against path traversal
    */
   private getFilePath(sessionId: string): string {
-    return path.join(this.fallbackDir, `${sessionId}.json`);
+    // Strip any path separators and dots to prevent traversal
+    const safe = sessionId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128);
+    const resolved = path.resolve(this.fallbackDir, `${safe}.json`);
+    // Ensure the resolved path stays inside fallbackDir
+    const base = path.resolve(this.fallbackDir);
+    if (!resolved.startsWith(base + path.sep) && resolved !== base) {
+      throw new Error(`Invalid sessionId: path traversal detected`);
+    }
+    return resolved;
   }
 
   /**
