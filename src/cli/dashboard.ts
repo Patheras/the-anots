@@ -384,15 +384,15 @@ export class Dashboard {
       },
     });
 
-    const inputBox = blessed.textbox({
+    const inputBox = blessed.textarea({
       parent: chatBox,
       bottom: 1,
       left: 2,
       width: '100%-4',
       height: 3,
-      inputOnFocus: true,
       keys: true,
       mouse: true,
+      inputOnFocus: true,
       border: {
         type: 'line',
       },
@@ -416,7 +416,7 @@ export class Dashboard {
       left: 0,
       width: '100%',
       height: 1,
-      content: '{center}{yellow-fg}[ESC] Exit  [ENTER] Send  [Limited functionality - configure LLM for full SACOP]{/yellow-fg}{/center}',
+      content: '{center}{yellow-fg}[ESC] Exit  [Ctrl+S] Send  [Limited functionality - configure LLM for full SACOP]{/yellow-fg}{/center}',
       tags: true,
       style: {
         fg: 'yellow',
@@ -430,11 +430,10 @@ export class Dashboard {
     
     inputBox.focus();
 
-    inputBox.on('submit', async (value: string) => {
-      if (!value.trim()) {
-        inputBox.clearValue();
-        inputBox.focus();
-        this.screen.render();
+    inputBox.key(['C-s'], async () => {
+      const value = inputBox.getValue().trim();
+      
+      if (!value) {
         return;
       }
 
@@ -499,7 +498,7 @@ export class Dashboard {
       top: 3,
       left: 0,
       width: '100%',
-      height: '100%-6',
+      height: '100%-7',
       tags: true,
       scrollable: true,
       alwaysScroll: true,
@@ -514,15 +513,15 @@ export class Dashboard {
       },
     });
 
-    const inputBox = blessed.textbox({
+    const inputBox = blessed.textarea({
       parent: chatBox,
       bottom: 1,
       left: 2,
       width: '100%-4',
       height: 3,
-      inputOnFocus: true,
       keys: true,
       mouse: true,
+      inputOnFocus: true,
       border: {
         type: 'line',
       },
@@ -546,7 +545,7 @@ export class Dashboard {
       left: 0,
       width: '100%',
       height: 1,
-      content: '{center}{yellow-fg}[ESC] Exit  [ENTER] Send  [↑↓] Scroll{/yellow-fg}{/center}',
+      content: '{center}{yellow-fg}[ESC] Exit  [Ctrl+S] Send  [↑↓] Scroll{/yellow-fg}{/center}',
       tags: true,
       style: {
         fg: 'yellow',
@@ -561,12 +560,11 @@ export class Dashboard {
 
     const conversationHistory: Array<{role: string; content: string}> = [];
 
-    // Handle input
-    inputBox.on('submit', async (value: string) => {
-      if (!value.trim()) {
-        inputBox.clearValue();
-        inputBox.focus();
-        this.screen.render();
+    // Handle Ctrl+S to send
+    inputBox.key(['C-s'], async () => {
+      const value = inputBox.getValue().trim();
+      
+      if (!value) {
         return;
       }
 
