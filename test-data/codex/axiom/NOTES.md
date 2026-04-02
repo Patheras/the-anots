@@ -15,3 +15,7 @@
 ## Test Section
 
 __lookupSetter__#isPrototype
+
+## Test Section
+
+r__lookupS
