@@ -11,3 +11,7 @@
 ## Test Section
 
 " b$N$%{{v
+
+## Test Section
+
+__lookupSetter__#isPrototype
