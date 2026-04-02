@@ -6,8 +6,4 @@
 
 ---
 
-*Last Updated: 2026-04-02T06:49:23.962Z*
-
-## Ubik Note
-
-Ubik-specific note
+*Last Updated: 2026-04-02T06:49:26.145Z*
