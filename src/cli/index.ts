@@ -8,11 +8,13 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
+import inquirer from 'inquirer';
 import * as theme from './theme';
 const { colors } = theme;
 import { UnifiedMemoryService } from '../memory/UnifiedMemoryService';
 import { runAxiomSetup, quickHandshake } from './axiom-assistant';
 import { startAxiomChat, askAxiom } from './axiom-chat';
+import { startDashboard } from './dashboard';
 import { MCPServer } from '../mcp/MCPServer';
 import { registerAllTools } from '../mcp/tools';
 import { config } from '../core/config';
@@ -42,6 +44,428 @@ async function cleanup() {
   if (memoryService) {
     await memoryService.shutdown();
   }
+}
+
+/**
+ * Interactive main menu
+ */
+async function showMainMenu() {
+  console.clear();
+  console.log(colors.cyan(theme.banner));
+  console.log('');
+  console.log(colors.highlight('═══════════════════════════════════════════════════════════════'));
+  console.log(colors.cyan('                    ANOTS MAIN MENU'));
+  console.log(colors.highlight('═══════════════════════════════════════════════════════════════'));
+  console.log('');
+
+  const choices = [
+    { name: `${colors.cyan('📊')} Dashboard (Real-time TUI)`, value: 'dashboard' },
+    { name: `${colors.cyan('🤖')} Chat with Axiom (TCAM Node C)`, value: 'axiom' },
+    { name: `${colors.magenta('🔍')} Search Memory`, value: 'search' },
+    { name: `${colors.yellow('📈')} System Status`, value: 'status' },
+    { name: `${colors.green('🚀')} Start MCP Server`, value: 'mcp' },
+    { name: `${colors.cyan('🌐')} Start API Server`, value: 'api' },
+    { name: `${colors.white('📥')} Import Conversation`, value: 'import' },
+    { name: `${colors.dimText('⚙️  Setup / Configuration')}`, value: 'setup' },
+    { name: `${colors.dimText('❓ Help')}`, value: 'help' },
+    new inquirer.Separator(),
+    { name: `${colors.error('✕ Exit')}`, value: 'exit' },
+  ];
+
+  const answer = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'action',
+      message: 'What would you like to do?',
+      choices,
+      pageSize: 15,
+    },
+  ]);
+
+  switch (answer.action) {
+    case 'dashboard':
+      const memory = await initMemoryService();
+      await startDashboard(memory);
+      break;
+    case 'axiom':
+      await startAxiomChat();
+      break;
+    case 'search':
+      await interactiveSearch();
+      break;
+    case 'status':
+      await showStatus();
+      await pressAnyKey();
+      await showMainMenu();
+      break;
+    case 'mcp':
+      await startMCPInteractive();
+      break;
+    case 'api':
+      await startAPIInteractive();
+      break;
+    case 'import':
+      await importInteractive();
+      break;
+    case 'setup':
+      await runAxiomSetup();
+      await pressAnyKey();
+      await showMainMenu();
+      break;
+    case 'help':
+      showHelp();
+      await pressAnyKey();
+      await showMainMenu();
+      break;
+    case 'exit':
+      console.log(theme.warning('\n⚠ Shutting down...'));
+      await cleanup();
+      process.exit(0);
+      break;
+  }
+}
+
+/**
+ * Interactive search
+ */
+async function interactiveSearch() {
+  const answer = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'query',
+      message: 'Enter search query:',
+      validate: (input) => input.trim().length > 0 || 'Query cannot be empty',
+    },
+    {
+      type: 'number',
+      name: 'limit',
+      message: 'Maximum results:',
+      default: 10,
+    },
+  ]);
+
+  try {
+    const memory = await initMemoryService();
+    console.log(theme.info(`\n▸ Searching memory layers for: "${answer.query}"\n`));
+
+    const results = await memory.search(answer.query, answer.limit);
+
+    if (results.length === 0) {
+      console.log(theme.warning('No results found'));
+    } else {
+      console.log(theme.success(`Found ${results.length} results:\n`));
+
+      results.forEach((result, index) => {
+        console.log(colors.highlight(`[${index + 1}]`));
+        console.log(theme.bullet(`Source: ${result.source}`));
+        console.log(theme.bullet(`Score: ${result.score.toFixed(2)}`));
+        console.log(theme.bullet(`Content: ${result.content.substring(0, 100)}...`));
+        console.log('');
+      });
+    }
+  } catch (error) {
+    console.error(theme.error(`Search failed: ${(error as Error).message}`));
+  }
+
+  await pressAnyKey();
+  await showMainMenu();
+}
+
+/**
+ * Show system status
+ */
+async function showStatus() {
+  try {
+    const memory = await initMemoryService();
+
+    console.log(theme.info('\n▸ System Status\n'));
+
+    const health = await memory.getLayerHealth();
+    const isHealthy = await memory.isHealthy();
+
+    console.log(theme.subheader('Overall Status:'));
+    console.log(theme.bullet(isHealthy ? theme.success('✓ OPERATIONAL') : theme.error('✗ DEGRADED')));
+    console.log('');
+
+    console.log(theme.subheader('Layer Health:'));
+    console.log(theme.bullet(`L1:Chronicle     ${health.chronicle ? theme.success('✓') : theme.error('✗')}`));
+    console.log(theme.bullet(`L2:ActiveStream  ${health.activeStream ? theme.success('✓') : theme.error('✗')}`));
+    console.log(theme.bullet(`L3:HiveMind      ${health.hiveMind ? theme.success('✓') : theme.error('✗')}`));
+    console.log(theme.bullet(`L4:Codex         ${health.codex ? theme.success('✓') : theme.error('✗')}`));
+    console.log('');
+  } catch (error) {
+    console.error(theme.error(`Status check failed: ${(error as Error).message}`));
+  }
+}
+
+/**
+ * Start MCP server interactively
+ */
+async function startMCPInteractive() {
+  const answer = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'auth',
+      message: 'Enable API key authentication?',
+      default: false,
+    },
+  ]);
+
+  console.log(theme.header('\nStarting MCP Server'));
+  console.log('');
+
+  try {
+    const memory = await initMemoryService();
+
+    let apiKeys: string[] = [];
+    let authEnabled = answer.auth;
+
+    if (authEnabled && config.mcpApiKeys) {
+      apiKeys = config.mcpApiKeys;
+      if (apiKeys.length === 0) {
+        console.log(theme.warning('⚠ No API keys configured. Disabling auth.'));
+        authEnabled = false;
+      }
+    }
+
+    const mcpServer = new MCPServer({
+      name: 'anots-mcp-server',
+      version: '1.0.0',
+      transport: 'stdio',
+      authEnabled,
+      apiKeys,
+      enableLogging: true,
+    });
+
+    console.log(theme.info('▸ Registering MCP tools...'));
+    await registerAllTools(mcpServer, memory);
+
+    const tools = mcpServer.getTools();
+    console.log(theme.success(`✓ Registered ${tools.length} tools`));
+    console.log('');
+
+    if (authEnabled) {
+      console.log(theme.info(`▸ Authentication: ${colors.success('ENABLED')} (${apiKeys.length} keys)`));
+    } else {
+      console.log(theme.info(`▸ Authentication: ${colors.dimText('DISABLED')}`));
+    }
+    console.log('');
+
+    console.log(theme.info('▸ Starting MCP server (stdio transport)...'));
+    await mcpServer.initialize();
+
+    console.log(theme.success('✓ MCP Server running'));
+    console.log(colors.dimText('Press Ctrl+C to stop'));
+    console.log('');
+
+    process.on('SIGINT', async () => {
+      console.log(theme.warning('\n\n⚠ Shutting down MCP server...'));
+      await mcpServer.shutdown();
+      await cleanup();
+      process.exit(0);
+    });
+  } catch (error) {
+    console.error(theme.error(`MCP server failed: ${(error as Error).message}`));
+    await pressAnyKey();
+    await showMainMenu();
+  }
+}
+
+/**
+ * Start API server interactively
+ */
+async function startAPIInteractive() {
+  const answer = await inquirer.prompt([
+    {
+      type: 'number',
+      name: 'port',
+      message: 'API port:',
+      default: 3001,
+    },
+    {
+      type: 'confirm',
+      name: 'axiom',
+      message: 'Enable Axiom chat endpoint?',
+      default: false,
+    },
+  ]);
+
+  console.log(theme.header('\nStarting API Server'));
+  console.log('');
+
+  try {
+    const memory = await initMemoryService();
+
+    let gateway: ANOTSGateway | undefined;
+    if (answer.axiom) {
+      console.log(theme.info('▸ Initializing Gateway for Axiom...'));
+      gateway = new ANOTSGateway({
+        zaiApiKey: config.zaiApiKey,
+        zaiBaseUrl: config.zaiBaseUrl || 'https://api.z.ai/api/coding/paas/v4',
+        zaiModel: config.zaiModel || 'glm-5-pro',
+        ollamaBaseUrl: config.ollamaBaseUrl,
+        ollamaModel: config.ollamaModel,
+        openrouterApiKey: process.env.OPENROUTER_API_KEY,
+        openrouterBaseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
+        openrouterModel: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+      });
+      await gateway.initialize();
+      console.log(theme.success('✓ Gateway initialized'));
+      console.log('');
+    }
+
+    const api = createMemoryServiceAPI(
+      memory,
+      {
+        port: answer.port,
+        host: '0.0.0.0',
+        enableAxiom: answer.axiom,
+      },
+      gateway
+    );
+
+    console.log(theme.info(`▸ Starting API server on port ${answer.port}...`));
+    await api.start();
+
+    console.log(theme.success('✓ API Server running'));
+    console.log('');
+    console.log(theme.subheader('Available Endpoints:'));
+    console.log(theme.bullet(`GET  http://localhost:${answer.port}/api/health`));
+    console.log(theme.bullet(`POST http://localhost:${answer.port}/api/memory/search`));
+    console.log(theme.bullet(`POST http://localhost:${answer.port}/api/memory/store`));
+    console.log(theme.bullet(`GET  http://localhost:${answer.port}/api/memory/stats`));
+    console.log(theme.bullet(`POST http://localhost:${answer.port}/api/chronicle/write`));
+
+    if (answer.axiom) {
+      console.log(theme.bullet(`POST http://localhost:${answer.port}/api/axiom/chat ${colors.success('(Axiom enabled)')}`));
+    }
+
+    console.log('');
+    console.log(colors.dimText('Press Ctrl+C to stop'));
+    console.log('');
+
+    process.on('SIGINT', async () => {
+      console.log(theme.warning('\n\n⚠ Shutting down API server...'));
+      await api.stop();
+      if (gateway) {
+        await gateway.shutdown();
+      }
+      await cleanup();
+      process.exit(0);
+    });
+  } catch (error) {
+    console.error(theme.error(`API server failed: ${(error as Error).message}`));
+    await pressAnyKey();
+    await showMainMenu();
+  }
+}
+
+/**
+ * Import conversation interactively
+ */
+async function importInteractive() {
+  const answer = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'file',
+      message: 'Path to conversation file:',
+      validate: (input) => input.trim().length > 0 || 'File path cannot be empty',
+    },
+    {
+      type: 'list',
+      name: 'type',
+      message: 'Session type:',
+      choices: ['general', 'ubik', 'axiom'],
+      default: 'general',
+    },
+    {
+      type: 'number',
+      name: 'chunkSize',
+      message: 'Messages per chapter:',
+      default: 50,
+    },
+    {
+      type: 'confirm',
+      name: 'dryRun',
+      message: 'Dry run (preview only)?',
+      default: false,
+    },
+  ]);
+
+  try {
+    const { ImportService, printImportSummary } = await import('../import/ImportService');
+
+    console.log(theme.header('\nConversation Import'));
+    console.log('');
+    console.log(theme.info(`▸ File: ${answer.file}`));
+    console.log(theme.info(`▸ Type: ${answer.type}`));
+    console.log(theme.info(`▸ Chunk Size: ${answer.chunkSize} messages/chapter`));
+    console.log(theme.info(`▸ Dry Run: ${answer.dryRun ? 'YES' : 'NO'}`));
+    console.log('');
+
+    const service = new ImportService((progress) => {
+      console.log(theme.bullet(`[${progress.phase}] ${progress.message} (${progress.current}/${progress.total})`));
+    });
+
+    const stats = await service.import({
+      filePath: answer.file,
+      sessionType: answer.type as 'ubik' | 'axiom' | 'general',
+      chunkSize: answer.chunkSize,
+      dryRun: answer.dryRun,
+      verbose: true,
+    });
+
+    printImportSummary(stats);
+
+    if (stats.errors > 0) {
+      console.log(theme.warning('⚠ Import completed with errors'));
+    } else {
+      console.log(theme.success('✓ Import completed successfully!'));
+    }
+  } catch (error) {
+    console.error(theme.error(`Import failed: ${(error as Error).message}`));
+  }
+
+  await pressAnyKey();
+  await showMainMenu();
+}
+
+/**
+ * Show help
+ */
+function showHelp() {
+  console.log(theme.header('\nANOTS CLI Help'));
+  console.log('');
+  console.log(theme.subheader('Interactive Mode:'));
+  console.log(theme.bullet('anots                    - Main menu (you are here!)'));
+  console.log('');
+  console.log(theme.subheader('Direct Commands:'));
+  console.log(theme.bullet('anots dashboard          - Real-time TUI dashboard'));
+  console.log(theme.bullet('anots axiom              - Chat with Axiom (TCAM Node C)'));
+  console.log(theme.bullet('anots mcp:start          - Start MCP server'));
+  console.log(theme.bullet('anots api:start          - Start API server'));
+  console.log(theme.bullet('anots status             - System status'));
+  console.log(theme.bullet('anots memory:search      - Search memory'));
+  console.log(theme.bullet('anots import <file>      - Import conversation'));
+  console.log(theme.bullet('anots setup              - Configuration wizard'));
+  console.log('');
+  console.log(theme.subheader('More Info:'));
+  console.log(theme.bullet('anots --help             - Full command list'));
+  console.log(theme.bullet('anots <command> --help   - Command-specific help'));
+  console.log('');
+}
+
+/**
+ * Press any key to continue
+ */
+async function pressAnyKey() {
+  await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'continue',
+      message: 'Press Enter to continue...',
+    },
+  ]);
 }
 
 // Handle process termination
@@ -247,6 +671,22 @@ program
 
 // System commands
 program
+  .command('dashboard')
+  .description('Real-time monitoring dashboard (Terminal UI)')
+  .option('-r, --refresh <ms>', 'Refresh interval in milliseconds', '2000')
+  .action(async (options: { refresh: string }) => {
+    try {
+      const memory = await initMemoryService();
+      const { startDashboard } = await import('./dashboard');
+      
+      await startDashboard(memory);
+    } catch (error) {
+      console.error(theme.error(`Dashboard failed: ${(error as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+program
   .command('init')
   .description('Quick initialization with Axiom handshake')
   .action(async () => {
@@ -278,8 +718,15 @@ program
 
 // Chat commands
 program
+  .command('axiom')
+  .description('Interactive chat with Axiom (TCAM Node C / SACOP)')
+  .action(async () => {
+    await startAxiomChat();
+  });
+
+program
   .command('chat')
-  .description('Interactive chat with Axiom (documentation-based)')
+  .description('Interactive chat with Axiom (alias for axiom)')
   .action(async () => {
     await startAxiomChat();
   });
@@ -588,4 +1035,14 @@ program
   });
 
 // Parse arguments
-program.parse();
+if (process.argv.length === 2) {
+  // No arguments provided - show main menu
+  showMainMenu().catch((error) => {
+    console.error(theme.error(`Error: ${error.message}`));
+    process.exit(1);
+  });
+} else {
+  // Arguments provided - use commander
+  program.parse();
+}
+

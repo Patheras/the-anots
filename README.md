@@ -59,7 +59,7 @@ Dedicated process running on Qwen 3.5 9B for:
 
 ```bash
 # Install dependencies
-npm install
+npm install --legacy-peer-deps
 
 # Pull Qwen 3.5 9B model
 ollama pull qwen2.5:9b-instruct-q4_K_M
@@ -79,7 +79,58 @@ docker run -d --name qdrant -p 6333:6333 -p 6334:6334 -v qdrant_storage:/qdrant/
 
 # Start Redis
 docker run -d --name redis -p 6379:6379 redis
+
+# Build and install globally
+npm run build
+npm install -g . --legacy-peer-deps
 ```
+
+### CLI Usage
+
+```bash
+# Interactive main menu
+anots
+
+# Real-time monitoring dashboard (Terminal UI)
+anots dashboard
+
+# Chat with Axiom (TCAM Node C)
+anots axiom
+
+# Start MCP server (19 tools for IDE integration)
+anots mcp:start
+
+# Start REST API server
+anots api:start
+
+# Start API with Axiom chat endpoint
+anots api:start --axiom
+
+# Search memory
+anots memory:search "your query"
+
+# Import conversation (JSON/Markdown)
+anots import conversation.json --type general
+
+# System status
+anots status
+
+# Configuration wizard
+anots setup
+
+# Show all commands
+anots --help
+```
+
+### Dashboard Features
+
+The Terminal UI dashboard (`anots dashboard`) provides:
+- Real-time memory layer health monitoring
+- System statistics (chapters, sessions, memories)
+- Activity log with timestamps
+- Keyboard shortcuts (F1-F3, R, Q)
+- Auto-refresh every 2 seconds
+- Cyberpunk aesthetic with 90s BBS vibes
 
 ### Verify Setup
 
