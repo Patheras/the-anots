@@ -102,7 +102,7 @@ export class Dashboard {
 
     // Footer
     this.grid.set(11, 0, 1, 12, blessed.box, {
-      content: '{center}{yellow-fg}▼▼▼{/yellow-fg}  {cyan-fg}[R]{/cyan-fg} Refresh  {cyan-fg}[F1]{/cyan-fg} Help  {red-fg}[Q]{/red-fg} Quit  {dim-fg}·  Chat: run "anots axiom"{/dim-fg}  {yellow-fg}▼▼▼{/yellow-fg}{/center}',
+      content: '{center}{yellow-fg}▼▼▼{/yellow-fg}  {cyan-fg}[R]{/cyan-fg} Refresh  {cyan-fg}[F1]{/cyan-fg} Help  {magenta-fg}[F2]{/magenta-fg} Chat with Axiom  {red-fg}[Q]{/red-fg} Quit  {yellow-fg}▼▼▼{/yellow-fg}{/center}',
       tags: true,
     });
   }
@@ -120,6 +120,15 @@ export class Dashboard {
 
     this.screen.key(['f1'], () => {
       this.showHelp();
+    });
+
+    this.screen.key(['f2'], () => {
+      this.stop();
+      this.screen.destroy();
+      // Launch axiom chat
+      const { spawn } = require('child_process');
+      const child = spawn('anots', ['axiom'], { stdio: 'inherit', shell: true });
+      child.on('exit', () => process.exit(0));
     });
   }
 
