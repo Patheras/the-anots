@@ -250,6 +250,12 @@ export class Dashboard {
   }
 
   private async openAxiomChat() {
+    // Import Axiom chat functions
+    const { callLLM, loadAxiomKnowledge, detectLLMProvider } = await import('./axiom-chat-utils');
+    
+    const provider = detectLLMProvider();
+    const llmMode = provider !== null;
+
     // Create full-screen chat overlay
     const chatBox = blessed.box({
       top: 0,
@@ -276,7 +282,7 @@ export class Dashboard {
       left: 0,
       width: '100%',
       height: 3,
-      content: '{center}{bold}{magenta-fg}╔═══════════════════════════════════════════════════════════════╗{/magenta-fg}{/bold}{/center}\n{center}{bold}{cyan-fg}AXIOM - NODE C / TCAM  ◆  SACOP PROTOCOL ACTIVE{/cyan-fg}{/bold}{/center}\n{center}{bold}{magenta-fg}╚═══════════════════════════════════════════════════════════════╝{/magenta-fg}{/bold}{/center}',
+      content: `{center}{bold}{magenta-fg}╔═══════════════════════════════════════════════════════════════╗{/magenta-fg}{/bold}{/center}\n{center}{bold}{cyan-fg}AXIOM - NODE C / TCAM  ◆  ${llmMode ? `SACOP ACTIVE · ${provider?.toUpperCase()}` : 'SACOP DEGRADED · FALLBACK'}{/cyan-fg}{/bold}{/center}\n{center}{bold}{magenta-fg}╚═══════════════════════════════════════════════════════════════╝{/magenta-fg}{/bold}{/center}`,
       tags: true,
       style: {
         fg: 'cyan',
@@ -346,7 +352,14 @@ export class Dashboard {
     chatLog.log('{cyan-fg}[SYSTEM]{/cyan-fg} Axiom dialogue protocol initiated...');
     chatLog.log('{magenta-fg}[AXIOM]{/magenta-fg} Node C online. SACOP active. State your query.');
     
+    if (!llmMode) {
+      chatLog.log('{yellow-fg}[WARNING]{/yellow-fg} LLM not configured. Using keyword fallback mode.');
+      chatLog.log('{dim-fg}         Run "anots setup" to configure LLM provider.{/dim-fg}');
+    }
+    
     inputBox.focus();
+
+    const conversationHistory: Array<{role: string; content: string}> = [];
 
     // Handle input
     inputBox.on('submit', async (value: string) => {
@@ -362,15 +375,45 @@ export class Dashboard {
       inputBox.focus();
       this.screen.render();
 
-      // Simulate Axiom response (replace with actual LLM call)
-      chatLog.log('{cyan-fg}[SYSTEM]{/cyan-fg} Processing query...');
-      this.screen.render();
-
-      // TODO: Integrate with actual Axiom LLM
-      setTimeout(() => {
-        chatLog.log('{magenta-fg}[AXIOM]{/magenta-fg} Query acknowledged. This is a placeholder response. LLM integration pending.');
+      // Call real LLM
+      if (llmMode) {
+        chatLog.log('{cyan-fg}[SYSTEM]{/cyan-fg} Processing query via LLM...');
         this.screen.render();
-      }, 500);
+
+        try {
+          const response = await callLLM(value, conversationHistory);
+          
+          if (response) {
+            conversationHistory.push({ role: 'user', content: value });
+            conversationHistory.push({ role: 'assistant', content: response });
+            
+            // Keep history manageable
+            if (conversationHistory.length > 20) {
+              conversationHistory.splice(0, 2);
+            }
+            
+            // Split long responses into multiple lines
+            const lines = response.split('\n');
+            lines.forEach(line => {
+              if (line.trim()) {
+                chatLog.log(`{magenta-fg}[AXIOM]{/magenta-fg} ${line}`);
+              } else {
+                chatLog.log('');
+              }
+            });
+          } else {
+            chatLog.log('{red-fg}[ERROR]{/red-fg} LLM request failed. Check API key and connectivity.');
+          }
+        } catch (error) {
+          chatLog.log(`{red-fg}[ERROR]{/red-fg} ${(error as Error).message}`);
+        }
+      } else {
+        // Keyword fallback
+        chatLog.log('{yellow-fg}[AXIOM]{/yellow-fg} Query acknowledged. LLM not configured.');
+        chatLog.log('{dim-fg}         Configure LLM: anots setup{/dim-fg}');
+      }
+      
+      this.screen.render();
     });
 
     // Handle escape
