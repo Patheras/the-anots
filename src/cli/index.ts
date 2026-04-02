@@ -9,6 +9,9 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import dotenv from 'dotenv';
+import * as path from 'path';
+import * as fs from 'fs';
 import * as theme from './theme';
 const { colors } = theme;
 import { UnifiedMemoryService } from '../memory/UnifiedMemoryService';
@@ -20,6 +23,21 @@ import { registerAllTools } from '../mcp/tools';
 import { config } from '../core/config';
 import { createMemoryServiceAPI } from '../api/MemoryServiceAPI';
 import { ANOTSGateway } from '../gateway/ANOTSGateway';
+
+// Load .env from multiple possible locations
+const possibleEnvPaths = [
+  path.join(process.cwd(), '.env'),
+  path.join(process.cwd(), 'anots-v1', '.env'),
+  path.join(__dirname, '../../.env'),
+  path.join(__dirname, '../../../.env'),
+];
+
+for (const envPath of possibleEnvPaths) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    break;
+  }
+}
 
 const program = new Command();
 

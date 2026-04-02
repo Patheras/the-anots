@@ -7,8 +7,23 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import dotenv from 'dotenv';
 
-// Load .env
-dotenv.config();
+// Load .env from multiple possible locations
+const possibleEnvPaths = [
+  path.join(process.cwd(), '.env'),
+  path.join(__dirname, '../../.env'),
+  path.join(__dirname, '../../../.env'),
+];
+
+for (const envPath of possibleEnvPaths) {
+  try {
+    const envContent = require('fs').readFileSync(envPath, 'utf-8');
+    dotenv.parse(envContent);
+    dotenv.config({ path: envPath });
+    break;
+  } catch {
+    // Try next path
+  }
+}
 
 /**
  * Detect which LLM provider is configured

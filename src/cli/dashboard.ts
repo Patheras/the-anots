@@ -484,7 +484,18 @@ export class Dashboard {
   }
 
   async start() {
+    // Check for .env and show config status
+    const provider = this.detectProvider();
+    
     this.log('{magenta-fg}◆◆◆{/magenta-fg} Dashboard initialization sequence started');
+    
+    if (provider) {
+      this.log(`{green-fg}▸{/green-fg} LLM Provider detected: ${provider.toUpperCase()}`);
+    } else {
+      this.log('{yellow-fg}▸{/yellow-fg} No LLM provider configured (fallback mode)');
+      this.log('{dim-fg}  Configure: cd anots-v1 && anots setup{/dim-fg}');
+    }
+    
     this.log(`{cyan-fg}▸{/cyan-fg} Auto-refresh protocol: every ${this.refreshInterval / 1000}s`);
     this.log('{yellow-fg}▸{/yellow-fg} Press F1 for help protocol');
     this.log('{magenta-fg}▸{/magenta-fg} Press F2 to initiate Axiom dialogue');
@@ -499,6 +510,13 @@ export class Dashboard {
 
     // Render
     this.screen.render();
+  }
+
+  private detectProvider(): string | null {
+    if (process.env.ZAI_API_KEY) return 'zai';
+    if (process.env.OPENROUTER_API_KEY) return 'openrouter';
+    if (process.env.OLLAMA_BASE_URL || process.env.OLLAMA_MODEL) return 'ollama';
+    return null;
   }
 
   stop() {
