@@ -2,7 +2,7 @@
 
 ## Section 1
 
-Original content
+Updated content
 
 ## Section 2
 
