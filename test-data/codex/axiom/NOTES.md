@@ -6,10 +6,4 @@
 
 ---
 
-*Last Updated: 2026-04-02T06:49:09.609Z*
-
-&__lookupGett
-
-3lkFo9'`Ba/"!
-
-isPrototype
+*Last Updated: 2026-04-02T06:49:21.373Z*
