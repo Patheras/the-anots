@@ -11,3 +11,5 @@
 gF cvt)_B=;ycl
 
 #|%!]x |u%m?Bx`!~"2 &
+
+~$D $_looku
