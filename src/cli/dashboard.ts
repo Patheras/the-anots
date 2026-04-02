@@ -122,13 +122,12 @@ export class Dashboard {
       this.showHelp();
     });
 
-    this.screen.key(['f2'], () => {
+    this.screen.key(['f2'], async () => {
       this.stop();
       this.screen.destroy();
-      // Launch axiom chat
-      const { spawn } = require('child_process');
-      const child = spawn('anots', ['axiom'], { stdio: 'inherit', shell: true });
-      child.on('exit', () => process.exit(0));
+      const { startAxiomChat } = await import('./axiom-chat');
+      await startAxiomChat();
+      process.exit(0);
     });
   }
 
