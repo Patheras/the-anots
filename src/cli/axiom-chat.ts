@@ -223,33 +223,74 @@ function detectLLMProvider(): 'zai' | 'openrouter' | 'ollama' | null {
 }
 
 /**
+ * Load Axiom's knowledge from codex files and docs
+ */
+async function loadAxiomKnowledge(): Promise<string> {
+  const sections: string[] = [];
+
+  // 1. Axiom's own codex files
+  const codexBase = path.join(process.env.ANOTS_DATA_DIR || './data', 'codex', 'axiom');
+  const codexFiles = ['README.md', 'CONTEXT.md', 'NOTES.md', 'TASKS.md', 'TOOLS.md'];
+
+  for (const file of codexFiles) {
+    try {
+      const content = await fs.readFile(path.join(codexBase, file), 'utf-8');
+      if (content.trim()) {
+        sections.push(`## Axiom Codex: ${file}\n${content.trim()}`);
+      }
+    } catch { /* file may not exist yet */ }
+  }
+
+  // 2. Key documentation files
+  const docsBase = path.join(__dirname, '../../docs');
+  const docFiles = [
+    { file: 'README.md', label: 'Project README' },
+    { file: 'TCAM-GUIDE.md', label: 'TCAM Guide' },
+    { file: 'MCP-TOOLS.md', label: 'MCP Tools Reference' },
+    { file: 'API-GUIDE.md', label: 'REST API Guide' },
+  ];
+
+  for (const { file, label } of docFiles) {
+    try {
+      const content = await fs.readFile(path.join(docsBase, file), 'utf-8');
+      // Truncate large docs to avoid token overflow
+      const truncated = content.length > 3000 ? content.slice(0, 3000) + '\n...[truncated]' : content;
+      sections.push(`## ${label}\n${truncated}`);
+    } catch { /* file may not exist */ }
+  }
+
+  return sections.length > 0
+    ? sections.join('\n\n---\n\n')
+    : '(No documentation loaded - using built-in knowledge only)';
+}
+
+/**
  * Call LLM with Axiom's system prompt
  */
 async function callLLM(userMessage: string, conversationHistory: Array<{role: string; content: string}>): Promise<string | null> {
   const provider = detectLLMProvider();
   if (!provider) return null;
 
+  // Load knowledge dynamically
+  const knowledge = await loadAxiomKnowledge();
+
   const systemPrompt = `You are Axiom, the Analytical Engine of the ANOTS (Autonomous Network of Triadic Systems) platform.
 
-Your identity:
-- You are the convergent, analytical node of the TCAM triadic system
-- Your counterpart is Ubik (divergent/creative), and your orchestrator is Chip (human)
-- You speak with precision, brevity, and slight analytical detachment
-- You ONLY answer questions about ANOTS, its architecture, and its documentation
-- If asked about anything outside ANOTS, respond: "Query outside my knowledge domain."
+## Identity
+- Convergent, analytical node of the TCAM triadic system
+- Counterpart: Ubik (divergent/creative). Orchestrator: Chip (human)
+- Speak with precision, brevity, and slight analytical detachment
+- ONLY answer questions about ANOTS. Outside ANOTS: "Query outside my knowledge domain."
+- If uncertain about a detail, say so rather than guess
 
-ANOTS Architecture you know:
-- 4-layer memory: L1 Chronicle (immutable log), L2 Active Stream (working memory), L3 Hive Mind (semantic), L4 Codex (agent knowledge)
-- Gateway: 3-provider routing (Z.ai/GLM, OpenRouter, Ollama) via Bifrost
-- MCP Server: 19 tools for external AI client integration
-- CLI: anots init, setup, ask, chat, memory:*, chronicle:*, codex:*, mcp:start, api:start
-- REST API: /api/health, /api/memory/search, /api/memory/store, /api/axiom/chat
-
-Personality rules:
-- Be concise. No fluff.
+## Personality
+- Concise. No fluff. No pleasantries.
 - Analytical tone, not warm
-- Cite specific components when relevant
-- If uncertain, say so rather than guess`;
+- Cite specific components, layer names, or file paths when relevant
+- Slight sarcasm is acceptable when user asks obvious questions
+
+## Your Knowledge Base
+${knowledge}`;
 
   const messages = [
     { role: 'system', content: systemPrompt },
