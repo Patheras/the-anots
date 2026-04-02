@@ -256,6 +256,211 @@ export class Dashboard {
     const provider = detectLLMProvider();
     const llmMode = provider !== null;
 
+    // If no LLM configured, offer to set it up
+    if (!llmMode) {
+      const setupBox = blessed.box({
+        top: 'center',
+        left: 'center',
+        width: '70%',
+        height: '50%',
+        content: `
+{center}{bold}{magenta-fg}╔═══════════════════════════════════════════════════════════╗{/magenta-fg}{/bold}{/center}
+{center}{bold}{cyan-fg}AXIOM INITIALIZATION REQUIRED{/cyan-fg}{/bold}{/center}
+{center}{bold}{magenta-fg}╚═══════════════════════════════════════════════════════════╝{/magenta-fg}{/bold}{/center}
+
+{center}{yellow-fg}No LLM provider detected.{/yellow-fg}{/center}
+{center}{yellow-fg}SACOP protocol requires active LLM connection.{/yellow-fg}{/center}
+
+{center}{green-fg}Available providers:{/green-fg}{/center}
+{center}{dim-fg}• Z.ai (GLM models){/dim-fg}{/center}
+{center}{dim-fg}• OpenRouter (300+ models){/dim-fg}{/center}
+{center}{dim-fg}• Ollama (local models){/dim-fg}{/center}
+
+{center}{cyan-fg}Would you like to configure LLM now?{/cyan-fg}{/center}
+
+{center}{dim-fg}[Y] Yes, configure now{/dim-fg}{/center}
+{center}{dim-fg}[N] No, use fallback mode{/dim-fg}{/center}
+{center}{dim-fg}[ESC] Return to dashboard{/dim-fg}{/center}
+        `,
+        tags: true,
+        border: {
+          type: 'line',
+        },
+        style: {
+          fg: 'white',
+          bg: 'black',
+          border: {
+            fg: 'magenta',
+          },
+        },
+      });
+
+      this.screen.append(setupBox);
+      setupBox.focus();
+
+      setupBox.key(['y', 'Y'], async () => {
+        setupBox.destroy();
+        this.screen.render();
+        
+        // Exit dashboard and run setup
+        this.stop();
+        this.screen.destroy();
+        
+        const { runAxiomSetup } = await import('./axiom-assistant');
+        await runAxiomSetup();
+        
+        process.exit(0);
+      });
+
+      setupBox.key(['n', 'N'], () => {
+        setupBox.destroy();
+        this.openAxiomChatFallback();
+      });
+
+      setupBox.key(['escape'], () => {
+        setupBox.destroy();
+        this.screen.render();
+      });
+
+      this.screen.render();
+      return;
+    }
+
+    // LLM is configured, proceed with chat
+    await this.openAxiomChatWithLLM(provider);
+  }
+
+  private openAxiomChatFallback() {
+    // Fallback mode chat (keyword-based)
+    const chatBox = blessed.box({
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      content: '',
+      tags: true,
+      border: {
+        type: 'line',
+      },
+      style: {
+        fg: 'cyan',
+        bg: 'black',
+        border: {
+          fg: 'yellow',
+        },
+      },
+    });
+
+    const chatHeader = blessed.box({
+      parent: chatBox,
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: 3,
+      content: `{center}{bold}{yellow-fg}╔═══════════════════════════════════════════════════════════════╗{/yellow-fg}{/bold}{/center}\n{center}{bold}{yellow-fg}AXIOM - NODE C / TCAM  ◆  SACOP DEGRADED · FALLBACK MODE{/yellow-fg}{/bold}{/center}\n{center}{bold}{yellow-fg}╚═══════════════════════════════════════════════════════════════╝{/yellow-fg}{/bold}{/center}`,
+      tags: true,
+      style: {
+        fg: 'yellow',
+      },
+    });
+
+    const chatLog = blessed.log({
+      parent: chatBox,
+      top: 3,
+      left: 0,
+      width: '100%',
+      height: '100%-6',
+      tags: true,
+      scrollable: true,
+      alwaysScroll: true,
+      scrollbar: {
+        ch: '█',
+        style: {
+          fg: 'yellow',
+        },
+      },
+      style: {
+        fg: 'green',
+      },
+    });
+
+    const inputBox = blessed.textbox({
+      parent: chatBox,
+      bottom: 1,
+      left: 2,
+      width: '100%-4',
+      height: 3,
+      inputOnFocus: true,
+      keys: true,
+      mouse: true,
+      border: {
+        type: 'line',
+      },
+      style: {
+        fg: 'white',
+        bg: 'black',
+        border: {
+          fg: 'yellow',
+        },
+        focus: {
+          border: {
+            fg: 'yellow',
+          },
+        },
+      },
+    });
+
+    const helpText = blessed.box({
+      parent: chatBox,
+      bottom: 0,
+      left: 0,
+      width: '100%',
+      height: 1,
+      content: '{center}{yellow-fg}[ESC] Exit  [ENTER] Send  [Limited functionality - configure LLM for full SACOP]{/yellow-fg}{/center}',
+      tags: true,
+      style: {
+        fg: 'yellow',
+      },
+    });
+
+    this.screen.append(chatBox);
+    chatLog.log('{yellow-fg}[SYSTEM]{/yellow-fg} Axiom fallback mode active...');
+    chatLog.log('{yellow-fg}[AXIOM]{/yellow-fg} SACOP degraded. Limited functionality available.');
+    chatLog.log('{dim-fg}         Configure LLM: Exit and run "anots setup"{/dim-fg}');
+    
+    inputBox.focus();
+
+    inputBox.on('submit', async (value: string) => {
+      if (!value.trim()) {
+        inputBox.clearValue();
+        inputBox.focus();
+        this.screen.render();
+        return;
+      }
+
+      chatLog.log(`{green-fg}[CHIP]{/green-fg} ${value}`);
+      inputBox.clearValue();
+      inputBox.focus();
+      this.screen.render();
+
+      chatLog.log('{yellow-fg}[AXIOM]{/yellow-fg} Query acknowledged. Fallback mode active.');
+      chatLog.log('{dim-fg}         Full SACOP requires LLM configuration.{/dim-fg}');
+      this.screen.render();
+    });
+
+    chatBox.key(['escape'], () => {
+      chatBox.destroy();
+      this.log('Axiom fallback mode terminated');
+      this.screen.render();
+    });
+
+    this.screen.render();
+  }
+
+  private async openAxiomChatWithLLM(provider: string) {
+    // Import Axiom chat functions
+    const { callLLM } = await import('./axiom-chat-utils');
+
     // Create full-screen chat overlay
     const chatBox = blessed.box({
       top: 0,
@@ -282,7 +487,7 @@ export class Dashboard {
       left: 0,
       width: '100%',
       height: 3,
-      content: `{center}{bold}{magenta-fg}╔═══════════════════════════════════════════════════════════════╗{/magenta-fg}{/bold}{/center}\n{center}{bold}{cyan-fg}AXIOM - NODE C / TCAM  ◆  ${llmMode ? `SACOP ACTIVE · ${provider?.toUpperCase()}` : 'SACOP DEGRADED · FALLBACK'}{/cyan-fg}{/bold}{/center}\n{center}{bold}{magenta-fg}╚═══════════════════════════════════════════════════════════════╝{/magenta-fg}{/bold}{/center}`,
+      content: `{center}{bold}{magenta-fg}╔═══════════════════════════════════════════════════════════════╗{/magenta-fg}{/bold}{/center}\n{center}{bold}{cyan-fg}AXIOM - NODE C / TCAM  ◆  SACOP ACTIVE · ${provider.toUpperCase()}{/cyan-fg}{/bold}{/center}\n{center}{bold}{magenta-fg}╚═══════════════════════════════════════════════════════════════╝{/magenta-fg}{/bold}{/center}`,
       tags: true,
       style: {
         fg: 'cyan',
@@ -352,11 +557,6 @@ export class Dashboard {
     chatLog.log('{cyan-fg}[SYSTEM]{/cyan-fg} Axiom dialogue protocol initiated...');
     chatLog.log('{magenta-fg}[AXIOM]{/magenta-fg} Node C online. SACOP active. State your query.');
     
-    if (!llmMode) {
-      chatLog.log('{yellow-fg}[WARNING]{/yellow-fg} LLM not configured. Using keyword fallback mode.');
-      chatLog.log('{dim-fg}         Run "anots setup" to configure LLM provider.{/dim-fg}');
-    }
-    
     inputBox.focus();
 
     const conversationHistory: Array<{role: string; content: string}> = [];
@@ -376,41 +576,35 @@ export class Dashboard {
       this.screen.render();
 
       // Call real LLM
-      if (llmMode) {
-        chatLog.log('{cyan-fg}[SYSTEM]{/cyan-fg} Processing query via LLM...');
-        this.screen.render();
+      chatLog.log('{cyan-fg}[SYSTEM]{/cyan-fg} Processing query via LLM...');
+      this.screen.render();
 
-        try {
-          const response = await callLLM(value, conversationHistory);
+      try {
+        const response = await callLLM(value, conversationHistory);
+        
+        if (response) {
+          conversationHistory.push({ role: 'user', content: value });
+          conversationHistory.push({ role: 'assistant', content: response });
           
-          if (response) {
-            conversationHistory.push({ role: 'user', content: value });
-            conversationHistory.push({ role: 'assistant', content: response });
-            
-            // Keep history manageable
-            if (conversationHistory.length > 20) {
-              conversationHistory.splice(0, 2);
-            }
-            
-            // Split long responses into multiple lines
-            const lines = response.split('\n');
-            lines.forEach(line => {
-              if (line.trim()) {
-                chatLog.log(`{magenta-fg}[AXIOM]{/magenta-fg} ${line}`);
-              } else {
-                chatLog.log('');
-              }
-            });
-          } else {
-            chatLog.log('{red-fg}[ERROR]{/red-fg} LLM request failed. Check API key and connectivity.');
+          // Keep history manageable
+          if (conversationHistory.length > 20) {
+            conversationHistory.splice(0, 2);
           }
-        } catch (error) {
-          chatLog.log(`{red-fg}[ERROR]{/red-fg} ${(error as Error).message}`);
+          
+          // Split long responses into multiple lines
+          const lines = response.split('\n');
+          lines.forEach(line => {
+            if (line.trim()) {
+              chatLog.log(`{magenta-fg}[AXIOM]{/magenta-fg} ${line}`);
+            } else {
+              chatLog.log('');
+            }
+          });
+        } else {
+          chatLog.log('{red-fg}[ERROR]{/red-fg} LLM request failed. Check API key and connectivity.');
         }
-      } else {
-        // Keyword fallback
-        chatLog.log('{yellow-fg}[AXIOM]{/yellow-fg} Query acknowledged. LLM not configured.');
-        chatLog.log('{dim-fg}         Configure LLM: anots setup{/dim-fg}');
+      } catch (error) {
+        chatLog.log(`{red-fg}[ERROR]{/red-fg} ${(error as Error).message}`);
       }
       
       this.screen.render();
