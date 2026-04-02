@@ -536,5 +536,56 @@ program
     }
   });
 
+// Import commands
+program
+  .command('import')
+  .description('Import conversation files (JSON/Markdown) into memory')
+  .argument('<file>', 'Path to conversation file')
+  .option('-t, --type <type>', 'Session type: ubik, axiom, or general', 'general')
+  .option('-c, --chunk-size <size>', 'Messages per chapter', '50')
+  .option('--dry-run', 'Preview import without writing')
+  .option('-v, --verbose', 'Show detailed progress')
+  .action(async (file: string, options: { type: string; chunkSize: string; dryRun?: boolean; verbose?: boolean }) => {
+    try {
+      // Dynamically import to avoid loading unless needed
+      const { ImportService, printImportSummary } = await import('../import/ImportService');
+      
+      console.log(theme.header('Conversation Import'));
+      console.log('');
+      console.log(theme.info(`▸ File: ${file}`));
+      console.log(theme.info(`▸ Type: ${options.type}`));
+      console.log(theme.info(`▸ Chunk Size: ${options.chunkSize} messages/chapter`));
+      console.log(theme.info(`▸ Dry Run: ${options.dryRun ? 'YES' : 'NO'}`));
+      console.log('');
+      
+      const service = new ImportService((progress) => {
+        if (options.verbose) {
+          console.log(theme.bullet(`[${progress.phase}] ${progress.message} (${progress.current}/${progress.total})`));
+        }
+      });
+      
+      const stats = await service.import({
+        filePath: file,
+        sessionType: options.type as 'ubik' | 'axiom' | 'general',
+        chunkSize: parseInt(options.chunkSize),
+        dryRun: options.dryRun,
+        verbose: options.verbose,
+      });
+      
+      printImportSummary(stats);
+      
+      if (stats.errors > 0) {
+        console.log(theme.warning('⚠ Import completed with errors'));
+        process.exit(1);
+      } else {
+        console.log(theme.success('✓ Import completed successfully!'));
+      }
+      
+    } catch (error) {
+      console.error(theme.error(`Import failed: ${(error as Error).message}`));
+      process.exit(1);
+    }
+  });
+
 // Parse arguments
 program.parse();

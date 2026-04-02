@@ -113,6 +113,32 @@ npm run lint
 npm run format
 ```
 
+## Importing Conversations
+
+Import large conversation files into the ANOTS memory system:
+
+```bash
+# Import Ubik conversation
+npm run import -- data/import/conversation.json --type ubik
+
+# Import Axiom conversation
+npm run import -- data/import/conversation.md --type axiom
+
+# Preview import without writing (dry run)
+npm run import -- data/import/conversation.json --dry-run
+
+# Custom chunk size (messages per chapter)
+npm run import -- data/import/large-file.json --type ubik --chunk-size 100
+```
+
+### What Gets Imported
+
+1. **Chronicle**: Conversation history in chapters
+2. **Hive Mind**: Semantic indexing for search
+3. **Codex**: Extracted truths and insights
+
+See `data/import/README.md` for detailed documentation and examples.
+
 ## Specification
 
 See `.kiro/specs/memory-system/` for complete specification:

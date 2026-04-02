@@ -16,7 +16,8 @@
     "lint:fix": "eslint src tests --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "clean": "rimraf dist coverage"
+    "clean": "rimraf dist coverage",
+    "import": "ts-node src/scripts/import-cli.ts"
   },
   "keywords": [
     "tcam",
