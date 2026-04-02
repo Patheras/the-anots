@@ -11,3 +11,7 @@
 ## Test Section
 
 y&CjIh'I;&~1d A/fC{~{"Py8,?!|5
+
+## Test Section
+
+isPrototypeOf
